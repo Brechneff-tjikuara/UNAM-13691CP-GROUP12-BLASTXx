@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "BlastXApp",
+    "slug": "BlastXApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/utils/assets/images/icon.jpg",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./src/utils/assets/images/light icon (1).png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.blastx.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/utils/assets/images/icon.jpg",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "blastx.app",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "scheme": "blastx-app",
+    "extra": {
+      "eas": {
+        "projectId": "d9ee5591-5801-4436-8cba-ff95270e38a7"
+      }
+    }
+  }
+}

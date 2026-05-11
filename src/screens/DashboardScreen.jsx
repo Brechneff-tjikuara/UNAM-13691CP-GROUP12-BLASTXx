@@ -1,0 +1,291 @@
+import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from "react-native";
+import React, { useEffect, useState, useCallback } from "react";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { storage } from "../utils/storage";
+
+const DashboardScreen = () => {
+  const navigation = useNavigation();
+  const [userData, setUserData] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [nextEvent, setNextEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    scheduled: 0,
+    completed: 0,
+    failed: 0,
+  });
+
+  const [timeLeft, setTimeLeft] = useState({ days: "00", hours: "00", mins: "00" });
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboardData();
+    }, [])
+  );
+
+  // Timer Effect
+  useEffect(() => {
+    if (!nextEvent || !nextEvent.launchDate) return;
+
+    const timer = setInterval(() => {
+      calculateTimeLeft();
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [nextEvent]);
+
+  const calculateTimeLeft = () => {
+    if (!nextEvent.launchDate) return;
+
+    const now = new Date().getTime();
+    const target = new Date(nextEvent.launchDate.replace(' ', 'T')).getTime();
+    const difference = target - now;
+
+    if (difference <= 0) {
+      setTimeLeft({ days: "00", hours: "00", mins: "00" });
+      return;
+    }
+
+    const d = Math.floor(difference / (1000 * 60 * 60 * 24));
+    const h = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const m = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+
+    setTimeLeft({
+      days: d.toString().padStart(2, '0'),
+      hours: h.toString().padStart(2, '0'),
+      mins: m.toString().padStart(2, '0')
+    });
+  };
+
+  const loadDashboardData = async () => {
+    setLoading(true);
+    const data = await storage.getUserData();
+    const eData = await storage.getBlasts(10); // Quota optimization: only fetch latest 10
+    
+    setUserData(data);
+    setEvents(eData);
+    
+    const scheduled = eData.filter(e => e.status === "Scheduled");
+    if (scheduled.length > 0) {
+      setNextEvent(scheduled[0]);
+    } else {
+      setNextEvent(null);
+    }
+
+    setStats({
+      total: eData.length,
+      scheduled: scheduled.length,
+      completed: eData.filter(e => e.status === "Completed").length,
+      failed: eData.filter(e => e.status === "Failed").length,
+    });
+    setLoading(false);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
+
+  if (loading && !userData) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color="#FF9900" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {userData?.company?.name || "BlastX"}
+        </Text>
+        <Pressable onPress={() => navigation.navigate("Profile")} style={styles.profileIcon}>
+          <Text style={styles.profileText}>👤</Text>
+        </Pressable>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Countdown Timer Section */}
+        {nextEvent ? (
+          <View style={styles.timerCard}>
+            <Text style={styles.timerLabel}>NEXT LAUNCH: {nextEvent.title}</Text>
+            <View style={styles.countdownContainer}>
+              <View style={styles.timeBox}>
+                <Text style={styles.timeValue}>{timeLeft.days}</Text>
+                <Text style={styles.timeUnit}>Days</Text>
+              </View>
+              <Text style={styles.timeDivider}>:</Text>
+              <View style={styles.timeBox}>
+                <Text style={styles.timeValue}>{timeLeft.hours}</Text>
+                <Text style={styles.timeUnit}>Hrs</Text>
+              </View>
+              <Text style={styles.timeDivider}>:</Text>
+              <View style={styles.timeBox}>
+                <Text style={styles.timeValue}>{timeLeft.mins}</Text>
+                <Text style={styles.timeUnit}>Mins</Text>
+              </View>
+            </View>
+            <Text style={styles.launchDateText}>Target: {nextEvent.launchDate || "TBD"}</Text>
+          </View>
+        ) : (
+          <View style={styles.emptyTimerCard}>
+            <Text style={styles.emptyTimerText}>No Active Launch Timers</Text>
+            <Text style={styles.emptyTimerSub}>Plan an event and clear safety checks to start.</Text>
+          </View>
+        )}
+
+        {/* Quick Stats */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.statCard, { backgroundColor: "#1A1F3A" }]}>
+            <Text style={styles.statNumber}>{stats.scheduled}</Text>
+            <Text style={styles.statLabel}>Active Timers</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: "#FF9900" }]}>
+            <Text style={styles.statNumber}>{stats.total}</Text>
+            <Text style={styles.statLabel}>Total Events</Text>
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Launch Control</Text>
+          <Pressable
+            style={[styles.actionButton, { backgroundColor: "#2ECC71" }]}
+            onPress={() => navigation.navigate("PlanEvent")}
+          >
+            <Text style={styles.actionButtonIcon}>📅</Text>
+            <Text style={styles.actionButtonText}>Plan New Event</Text>
+          </Pressable>
+        </View>
+
+        {/* Recent Event History Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Events</Text>
+          {events.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No events planned yet.</Text>
+            </View>
+          ) : (
+            events.map((event) => (
+              <View key={event.id} style={styles.historyItem}>
+                <View
+                  style={[
+                    styles.historyStatus,
+                    { backgroundColor: event.status === "Scheduled" ? "#FF9900" : "#2ECC71" },
+                  ]}
+                >
+                  <Text style={styles.historyStatusIcon}>
+                    {event.status === "Scheduled" ? "⏳" : "✓"}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.historyTitle}>{event.title}</Text>
+                  <Text style={styles.historyTime}>
+                    Created: {formatDate(event.createdAt)}
+                  </Text>
+                </View>
+                <View style={styles.badge}>
+                   <Text style={styles.badgeText}>{event.status}</Text>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </View>
+  );
+};
+
+export default DashboardScreen;
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#F8F9FA" },
+  header: {
+    backgroundColor: "#1A1F3A",
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#FFF", flex: 1 },
+  profileIcon: { backgroundColor: "rgba(255,255,255,0.1)", padding: 8, borderRadius: 20 },
+  profileText: { fontSize: 18 },
+  content: { flex: 1, padding: 15 },
+  timerCard: {
+    backgroundColor: "#1A1F3A",
+    borderRadius: 20,
+    padding: 25,
+    alignItems: "center",
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  timerLabel: { color: "#FF9900", fontWeight: "bold", fontSize: 12, letterSpacing: 1, marginBottom: 15 },
+  countdownContainer: { flexDirection: "row", alignItems: "center", gap: 10 },
+  timeBox: { alignItems: "center" },
+  timeValue: { color: "#FFF", fontSize: 36, fontWeight: "bold" },
+  timeUnit: { color: "#95A5A6", fontSize: 10, marginTop: -5 },
+  timeDivider: { color: "#FFF", fontSize: 24, fontWeight: "bold", marginTop: -15 },
+  launchDateText: { color: "#95A5A6", fontSize: 12, marginTop: 20 },
+  emptyTimerCard: {
+    padding: 30,
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ECF0F1",
+    marginBottom: 20,
+  },
+  emptyTimerText: { fontSize: 16, fontWeight: "bold", color: "#2C3E50" },
+  emptyTimerSub: { fontSize: 12, color: "#95A5A6", marginTop: 5, textAlign: "center" },
+  statsContainer: { flexDirection: "row", gap: 12, marginBottom: 20 },
+  statCard: {
+    flex: 1,
+    borderRadius: 15,
+    padding: 15,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statNumber: { fontSize: 20, fontWeight: "bold", color: "#FFF" },
+  statLabel: { fontSize: 10, color: "rgba(255,255,255,0.7)", marginTop: 2 },
+  section: { marginBottom: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: "bold", color: "#2C3E50", marginBottom: 15 },
+  actionButton: {
+    flexDirection: "row",
+    borderRadius: 12,
+    padding: 18,
+    marginBottom: 10,
+    alignItems: "center",
+    gap: 12,
+  },
+  actionButtonText: { fontSize: 14, fontWeight: "bold", color: "#FFF" },
+  actionButtonIcon: { fontSize: 20 },
+  historyItem: {
+    flexDirection: "row",
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#ECF0F1",
+  },
+  historyStatus: { width: 35, height: 35, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+  historyStatusIcon: { fontSize: 16 },
+  historyTitle: { fontSize: 14, fontWeight: "bold", color: "#2C3E50" },
+  historyTime: { fontSize: 12, color: "#95A5A6", marginTop: 2 },
+  badge: { backgroundColor: "#F8F9FA", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  badgeText: { fontSize: 10, fontWeight: "bold", color: "#95A5A6" },
+  emptyState: { padding: 30, alignItems: "center" },
+  emptyStateText: { color: "#95A5A6", fontSize: 14 },
+});
