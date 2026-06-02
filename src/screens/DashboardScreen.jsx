@@ -9,6 +9,7 @@ const DashboardScreen = () => {
   const [events, setEvents] = useState([]);
   const [nextEvent, setNextEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     scheduled: 0,
@@ -20,52 +21,32 @@ const DashboardScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      loadDashboardData();
+      let unsubscribeBlasts = () => {};
+
+      const setupDashboard = async () => {
+        setLoading(true);
+        const data = await storage.getUserData();
+        setUserData(data);
+
+        // storage.onBlastsUpdate now needs to provide metadata or we handle it here
+        // Let's modify storage.onBlastsUpdate to pass metadata
+        unsubscribeBlasts = storage.onBlastsUpdate((eData, metadata) => {
+          setEvents(eData);
+          updateStats(eData);
+          setLoading(false);
+          setIsSyncing(metadata?.hasPendingWrites || false);
+        });
+      };
+
+      setupDashboard();
+
+      return () => {
+        if (unsubscribeBlasts) unsubscribeBlasts();
+      };
     }, [])
   );
 
-  // Timer Effect
-  useEffect(() => {
-    if (!nextEvent || !nextEvent.launchDate) return;
-
-    const timer = setInterval(() => {
-      calculateTimeLeft();
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [nextEvent]);
-
-  const calculateTimeLeft = () => {
-    if (!nextEvent.launchDate) return;
-
-    const now = new Date().getTime();
-    const target = new Date(nextEvent.launchDate.replace(' ', 'T')).getTime();
-    const difference = target - now;
-
-    if (difference <= 0) {
-      setTimeLeft({ days: "00", hours: "00", mins: "00" });
-      return;
-    }
-
-    const d = Math.floor(difference / (1000 * 60 * 60 * 24));
-    const h = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const m = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-
-    setTimeLeft({
-      days: d.toString().padStart(2, '0'),
-      hours: h.toString().padStart(2, '0'),
-      mins: m.toString().padStart(2, '0')
-    });
-  };
-
-  const loadDashboardData = async () => {
-    setLoading(true);
-    const data = await storage.getUserData();
-    const eData = await storage.getBlasts(10); // Quota optimization: only fetch latest 10
-    
-    setUserData(data);
-    setEvents(eData);
-    
+  const updateStats = (eData) => {
     const scheduled = eData.filter(e => e.status === "Scheduled");
     if (scheduled.length > 0) {
       setNextEvent(scheduled[0]);
@@ -79,7 +60,6 @@ const DashboardScreen = () => {
       completed: eData.filter(e => e.status === "Completed").length,
       failed: eData.filter(e => e.status === "Failed").length,
     });
-    setLoading(false);
   };
 
   const formatDate = (dateString) => {
@@ -99,9 +79,14 @@ const DashboardScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {userData?.company?.name || "BlastX"}
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {userData?.company?.name || "BlastX"}
+          </Text>
+          {isSyncing && (
+            <Text style={styles.syncingText}>☁️ Syncing changes...</Text>
+          )}
+        </View>
         <Pressable onPress={() => navigation.navigate("Profile")} style={styles.profileIcon}>
           <Text style={styles.profileText}>👤</Text>
         </Pressable>
@@ -214,6 +199,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: { fontSize: 18, fontWeight: "bold", color: "#FFF", flex: 1 },
+  syncingText: { fontSize: 10, color: "#FF9900", marginTop: 2, fontWeight: "600" },
   profileIcon: { backgroundColor: "rgba(255,255,255,0.1)", padding: 8, borderRadius: 20 },
   profileText: { fontSize: 18 },
   content: { flex: 1, padding: 15 },
