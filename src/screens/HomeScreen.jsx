@@ -18,16 +18,28 @@ const HomeScreen = () => {
 
   useEffect(() => {
     checkInitialState();
+    
+    // Safety timeout to prevent infinite loading state
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 5000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const checkInitialState = async () => {
-    const isComplete = await storage.isSetupComplete();
-    if (isComplete) {
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Dashboard" }],
-      });
-    } else {
+    try {
+      const isComplete = await storage.isSetupComplete();
+      if (isComplete) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Dashboard" }],
+        });
+      } else {
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error("Error checking initial state:", error);
       setIsLoading(false);
     }
   };
@@ -36,6 +48,7 @@ const HomeScreen = () => {
     return (
       <View style={[styles.container, styles.center]}>
         <ActivityIndicator size="large" color="#FF9900" />
+        <Text style={{ marginTop: 20, color: "#95A5A6" }}>Loading BlastX...</Text>
       </View>
     );
   }
