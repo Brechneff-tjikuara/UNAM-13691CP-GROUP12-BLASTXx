@@ -36,11 +36,29 @@ const auth = initializeAuth(app, {
     : getReactNativePersistence(AsyncStorage)
 });
 
-// Initialize Firestore with Persistent Cache
-const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: Platform.OS === 'web' ? persistentMultipleTabManager() : undefined
-  })
-});
+import { 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager,
+  getFirestore // Make sure to add this back to your imports at the top!
+} from "firebase/firestore";
+
+// ... (rest of your imports and auth config)
+
+// Initialize Firestore with a fallback for restricted environments
+let db;
+
+try {
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: Platform.OS === 'web' ? persistentMultipleTabManager() : undefined
+    })
+  });
+} catch (error) {
+  console.warn("Firestore offline persistence failed to initialize. Falling back to default online mode.", error);
+  
+  // Fallback to regular initialization if IndexedDB/cache is unavailable
+  db = getFirestore(app);
+}
 
 export { auth, db };
