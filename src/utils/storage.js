@@ -85,8 +85,8 @@ export const storage = {
         createdByName: user.displayName || user.email,
       };
 
-      // Firestore will queue this if offline
-      const docRef = await addDoc(collection(db, "blasts"), newBlast);
+      // Store in company subcollection: /companies/{code}/blasts/{id}
+      const docRef = await addDoc(collection(db, "companies", companyCode, "blasts"), newBlast);
       return { id: docRef.id, ...newBlast };
     } catch (e) {
       console.error("Error saving blast", e);
@@ -105,8 +105,7 @@ export const storage = {
       if (!uData || !uData.companyCode) return;
 
       const q = query(
-        collection(db, "blasts"), 
-        where("companyCode", "==", uData.companyCode),
+        collection(db, "companies", uData.companyCode, "blasts"), 
         orderBy("createdAt", "desc"),
         limit(maxResults)
       );
@@ -138,8 +137,7 @@ export const storage = {
       if (!uData) return [];
 
       const q = query(
-        collection(db, "blasts"), 
-        where("companyCode", "==", uData.companyCode),
+        collection(db, "companies", uData.companyCode, "blasts"), 
         orderBy("createdAt", "desc"),
         limit(maxResults)
       );
@@ -156,15 +154,14 @@ export const storage = {
     }
   },
 
-  // TEAMMATES
+  // TEAMMATES - Fetch from company subcollection
   getTeammates: async () => {
     try {
       const uData = await storage.getUserData();
       if (!uData) return [];
 
       const q = query(
-        collection(db, "users"),
-        where("companyCode", "==", uData.companyCode)
+        collection(db, "companies", uData.companyCode, "team")
       );
 
       const querySnapshot = await getDocs(q);
