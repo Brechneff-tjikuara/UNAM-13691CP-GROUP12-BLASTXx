@@ -44,9 +44,11 @@ const SignupScreen = () => {
 
     setLoading(true);
     try {
+      console.log("Starting signup for:", email);
       // 1. Create User
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      console.log("Auth user created:", user.uid);
 
       // 2. Determine Company Code (Use existing or generate new)
       let finalCode = companyCode.trim().toUpperCase();
@@ -55,15 +57,27 @@ const SignupScreen = () => {
       if (!finalCode) {
         finalCode = generateCode();
         isNewCompany = true;
+        console.log("Generated new company code:", finalCode);
       } else {
+        console.log("Checking existing company code:", finalCode);
         // Check if company exists
-        const companySnap = await getDoc(doc(db, "companies", finalCode));
-        if (!companySnap.exists()) {
+        try {
+          const companySnap = await getDoc(doc(db, "companies", finalCode));
+          if (!companySnap.exists()) {
+            isNewCompany = true;
+            console.log("Company code does not exist, will create new.");
+          } else {
+            console.log("Joining existing company.");
+          }
+        } catch (docErr) {
+          console.error("Error checking company:", docErr);
+          // If we can't check, assume we need to create it (or handle as error)
           isNewCompany = true;
         }
       }
 
       // 3. Save User Profile
+      console.log("Saving user profile to Firestore...");
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name,
@@ -71,15 +85,18 @@ const SignupScreen = () => {
         companyCode: finalCode,
         createdAt: new Date().toISOString(),
       });
+      console.log("User profile saved.");
 
       // 4. Create Company if new
       if (isNewCompany) {
+        console.log("Creating new company record...");
         await setDoc(doc(db, "companies", finalCode), {
           code: finalCode,
           name: name + "'s Company", // Default name, can be changed in setup
           createdAt: new Date().toISOString(),
           createdBy: user.uid,
         });
+        console.log("Company record created.");
       }
 
       Alert.alert("Success", `Account created! Your Company Code is: ${finalCode}`, [
@@ -87,7 +104,7 @@ const SignupScreen = () => {
       ]);
 
     } catch (error) {
-      console.error(error);
+      console.error("SIGNUP ERROR:", error);
       Alert.alert("Signup Failed", error.message);
     } finally {
       setLoading(false);
