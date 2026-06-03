@@ -1,211 +1,155 @@
-import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from "react-native";
-import React, { useEffect, useState, useCallback } from "react";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+  FlatList,
+} from "react-native";
+import React, { useEffect, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
 import { storage } from "../utils/storage";
 
-const DashboardScreen = () => {
+const ProfileScreen = () => {
   const navigation = useNavigation();
   const [userData, setUserData] = useState(null);
-  const [events, setEvents] = useState([]);
-  const [nextEvent, setNextEvent] = useState(null);
+  const [teammates, setTeammates] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [stats, setStats] = useState({
-    total: 0,
-    scheduled: 0,
-    completed: 0,
-    failed: 0,
-  });
 
-  const [timeLeft, setTimeLeft] = useState({ days: "00", hours: "00", mins: "00" });
+  useEffect(() => {
+    let isMounted = true;
 
-  useFocusEffect(
-    useCallback(() => {
-      let unsubscribeBlasts = () => {};
+    const loadProfileData = async () => {
+      setLoading(true);
+      const data = await storage.getUserData();
+      
+      if (!isMounted) return;
+      setUserData(data);
+      
+      if (data) {
+        const team = await storage.getTeammates();
+        if (isMounted) setTeammates(team);
+      }
+      if (isMounted) setLoading(false);
+    };
 
-      const setupDashboard = async () => {
-        setLoading(true);
-        const data = await storage.getUserData();
-        setUserData(data);
+    loadProfileData();
 
-        // storage.onBlastsUpdate now needs to provide metadata or we handle it here
-        // Let's modify storage.onBlastsUpdate to pass metadata
-        unsubscribeBlasts = storage.onBlastsUpdate((eData, metadata) => {
-          setEvents(eData);
-          updateStats(eData);
-          setLoading(false);
-          setIsSyncing(metadata?.hasPendingWrites || false);
-        });
-      };
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-      setupDashboard();
-
-      return () => {
-        if (unsubscribeBlasts) unsubscribeBlasts();
-      };
-    }, [])
-  );
-
-  const updateStats = (eData) => {
-    const scheduled = eData.filter(e => e.status === "Scheduled");
-    if (scheduled.length > 0) {
-      setNextEvent(scheduled[0]);
-    } else {
-      setNextEvent(null);
-    }
-
-    setStats({
-      total: eData.length,
-      scheduled: scheduled.length,
-      completed: eData.filter(e => e.status === "Completed").length,
-      failed: eData.filter(e => e.status === "Failed").length,
-    });
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout? This will clear your local cache.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Logout",
+          onPress: async () => {
+            await storage.clearAll();
+            navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+          },
+          style: "destructive",
+        },
+      ]
+    );
   };
 
   if (loading && !userData) {
     return (
-      <View style={[styles.container, { justifyContent: 'center' }]}>
+      <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#FF9900" />
       </View>
     );
   }
 
+  // Component to render individual teammate items cleanly
+  const renderTeammember = ({ item: member }) => (
+    <View style={styles.teammateItem}>
+      <View style={styles.teammateAvatar}>
+        <Text style={styles.teammateInitial}>{member.name?.charAt(0) || "U"}</Text>
+      </View>
+      <View style={styles.teammateInfo}>
+        <Text style={styles.teammateName}>{member.name}</Text>
+        <Text style={styles.teammateEmail}>{member.email}</Text>
+      </View>
+      {member.uid === userData?.uid && (
+        <View style={styles.youBadge}>
+          <Text style={styles.youText}>YOU</Text>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {userData?.company?.name || "BlastX"}
-          </Text>
-          {isSyncing && (
-            <Text style={styles.syncingText}>☁️ Syncing changes...</Text>
-          )}
-        </View>
-        <Pressable onPress={() => navigation.navigate("Profile")} style={styles.profileIcon}>
-          <Text style={styles.profileText}>👤</Text>
+        <Text style={styles.headerTitle}>Account & Team</Text>
+        <Pressable onPress={() => navigation.navigate("Dashboard")} style={styles.backButton}>
+          <Text style={styles.backButtonText}>← Dashboard</Text>
         </Pressable>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Countdown Timer Section */}
-        {nextEvent ? (
-          <View style={styles.timerCard}>
-            <Text style={styles.timerLabel}>NEXT LAUNCH: {nextEvent.title}</Text>
-            <View style={styles.countdownContainer}>
-              <View style={styles.timeBox}>
-                <Text style={styles.timeValue}>{timeLeft.days}</Text>
-                <Text style={styles.timeUnit}>Days</Text>
-              </View>
-              <Text style={styles.timeDivider}>:</Text>
-              <View style={styles.timeBox}>
-                <Text style={styles.timeValue}>{timeLeft.hours}</Text>
-                <Text style={styles.timeUnit}>Hrs</Text>
-              </View>
-              <Text style={styles.timeDivider}>:</Text>
-              <View style={styles.timeBox}>
-                <Text style={styles.timeValue}>{timeLeft.mins}</Text>
-                <Text style={styles.timeUnit}>Mins</Text>
-              </View>
+        {/* Company Card */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatar}>🏢</Text>
+          </View>
+          <Text style={styles.userName}>{userData?.company?.name || "Your Company"}</Text>
+          <Text style={styles.userEmail}>
+            Code: <Text style={styles.highlightText}>{userData?.companyCode}</Text>
+          </Text>
+          
+          <View style={styles.userStatsContainer}>
+            <View style={styles.userStat}>
+              <Text style={styles.userStatValue}>{teammates.length}</Text>
+              <Text style={styles.userStatLabel}>Teammates</Text>
             </View>
-            <Text style={styles.launchDateText}>Target: {nextEvent.launchDate || "TBD"}</Text>
-          </View>
-        ) : (
-          <View style={styles.emptyTimerCard}>
-            <Text style={styles.emptyTimerText}>No Active Launch Timers</Text>
-            <Text style={styles.emptyTimerSub}>Plan an event and clear safety checks to start.</Text>
-          </View>
-        )}
-
-        {/* Quick Stats */}
-        <View style={styles.statsContainer}>
-          <View style={[styles.statCard, { backgroundColor: "#1A1F3A" }]}>
-            <Text style={styles.statNumber}>{stats.scheduled}</Text>
-            <Text style={styles.statLabel}>Pending Blasts</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: "#FF9900" }]}>
-            <Text style={styles.statNumber}>{stats.total}</Text>
-            <Text style={styles.statLabel}>Total Operations</Text>
+            <View style={styles.userStat}>
+              <Text style={styles.userStatValue}>{userData?.company?.industry || "N/A"}</Text>
+              <Text style={styles.userStatLabel}>Industry</Text>
+            </View>
           </View>
         </View>
 
-        {/* Action Buttons */}
+        {/* Teammates Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Blast Control</Text>
-          <Pressable
-            style={[styles.actionButton, { backgroundColor: "#2ECC71" }]}
-            onPress={() => navigation.navigate("PlanEvent")}
-          >
-            <Text style={styles.actionButtonIcon}>💥</Text>
-            <Text style={styles.actionButtonText}>Plan New Blast</Text>
+          <Text style={styles.sectionTitle}>Teammates ({teammates.length})</Text>
+          <FlatList
+            data={teammates}
+            renderItem={renderTeammember}
+            keyExtractor={(_, index) => index.toString()}
+            scrollEnabled={false} // Keeps scrolling unified inside parent ScrollView
+          />
+        </View>
+
+        {/* Account Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Settings</Text>
+          <Pressable style={styles.settingsItem} onPress={handleLogout}>
+            <Text style={styles.settingsItemIcon}>🚪</Text>
+            <Text style={styles.logoutText}>Logout from BlastX</Text>
           </Pressable>
         </View>
 
-        {/* Recent Event History Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Operations</Text>
-          {events.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No operations recorded yet.</Text>
-            </View>
-          ) : (
-            events.map((event) => (
-              <Pressable 
-                key={event.id} 
-                style={styles.historyItem}
-                onPress={() => {
-                  if (event.status === "Scheduled") {
-                    navigation.navigate("RecordResult", { 
-                      blastId: event.id, 
-                      blastTitle: event.title 
-                    });
-                  }
-                }}
-              >
-                <View
-                  style={[
-                    styles.historyStatus,
-                    { backgroundColor: event.status === "Scheduled" ? "#FF9900" : "#2ECC71" },
-                  ]}
-                >
-                  <Text style={styles.historyStatusIcon}>
-                    {event.status === "Scheduled" ? "⏳" : "✓"}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.historyTitle}>{event.title}</Text>
-                  <Text style={styles.historyTime}>
-                    {event.status === "Scheduled" ? "Scheduled" : "Completed"}: {formatDate(event.createdAt)}
-                  </Text>
-                </View>
-                {event.status === "Scheduled" ? (
-                  <View style={[styles.badge, { backgroundColor: "#E8F4FD" }]}>
-                    <Text style={[styles.badgeText, { color: "#3498DB" }]}>Record Result</Text>
-                  </View>
-                ) : (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{event.status}</Text>
-                  </View>
-                )}
-              </Pressable>
-            ))
-          )}
-        </View>
-        <View style={{ height: 40 }} />
+        <View style={styles.footerSpacing} />
       </ScrollView>
     </View>
   );
 };
 
-export default DashboardScreen;
+export default ProfileScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8F9FA" },
+  centerContent: { justifyContent: 'center' },
   header: {
     backgroundColor: "#1A1F3A",
     paddingTop: 50,
@@ -215,80 +159,42 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#FFF", flex: 1 },
-  syncingText: { fontSize: 10, color: "#FF9900", marginTop: 2, fontWeight: "600" },
-  profileIcon: { backgroundColor: "rgba(255,255,255,0.1)", padding: 8, borderRadius: 20 },
-  profileText: { fontSize: 18 },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#FFF" },
+  backButton: { backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 15 },
+  backButtonText: { color: "#FFF", fontSize: 12 },
   content: { flex: 1, padding: 15 },
-  timerCard: {
-    backgroundColor: "#1A1F3A",
+  profileCard: {
+    backgroundColor: "#FFF",
     borderRadius: 20,
     padding: 25,
     alignItems: "center",
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    elevation: 2,
   },
-  timerLabel: { color: "#FF9900", fontWeight: "bold", fontSize: 12, letterSpacing: 1, marginBottom: 15 },
-  countdownContainer: { flexDirection: "row", alignItems: "center", gap: 10 },
-  timeBox: { alignItems: "center" },
-  timeValue: { color: "#FFF", fontSize: 36, fontWeight: "bold" },
-  timeUnit: { color: "#95A5A6", fontSize: 10, marginTop: -5 },
-  timeDivider: { color: "#FFF", fontSize: 24, fontWeight: "bold", marginTop: -15 },
-  launchDateText: { color: "#95A5A6", fontSize: 12, marginTop: 20 },
-  emptyTimerCard: {
-    padding: 30,
-    backgroundColor: "#FFF",
-    borderRadius: 20,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ECF0F1",
-    marginBottom: 20,
-  },
-  emptyTimerText: { fontSize: 16, fontWeight: "bold", color: "#2C3E50" },
-  emptyTimerSub: { fontSize: 12, color: "#95A5A6", marginTop: 5, textAlign: "center" },
-  statsContainer: { flexDirection: "row", gap: 12, marginBottom: 20 },
-  statCard: {
-    flex: 1,
-    borderRadius: 15,
-    padding: 15,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  statNumber: { fontSize: 20, fontWeight: "bold", color: "#FFF" },
-  statLabel: { fontSize: 10, color: "rgba(255,255,255,0.7)", marginTop: 2 },
-  section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: "bold", color: "#2C3E50", marginBottom: 15 },
-  actionButton: {
-    flexDirection: "row",
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 10,
-    alignItems: "center",
-    gap: 12,
-  },
-  actionButtonText: { fontSize: 14, fontWeight: "bold", color: "#FFF" },
-  actionButtonIcon: { fontSize: 20 },
-  historyItem: {
-    flexDirection: "row",
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 10,
-    alignItems: "center",
-    gap: 12,
-    borderWidth: 1,
-    borderColor: "#ECF0F1",
-  },
-  historyStatus: { width: 35, height: 35, borderRadius: 10, justifyContent: "center", alignItems: "center" },
-  historyStatusIcon: { fontSize: 16 },
-  historyTitle: { fontSize: 14, fontWeight: "bold", color: "#2C3E50" },
-  historyTime: { fontSize: 12, color: "#95A5A6", marginTop: 2 },
-  badge: { backgroundColor: "#F8F9FA", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  badgeText: { fontSize: 10, fontWeight: "bold", color: "#95A5A6" },
-  emptyState: { padding: 30, alignItems: "center" },
-  emptyStateText: { color: "#95A5A6", fontSize: 14 },
+  avatarContainer: { width: 70, height: 70, borderRadius: 35, backgroundColor: "#F0F3F4", justifyContent: "center", alignItems: "center", marginBottom: 15 },
+  avatar: { fontSize: 30 },
+  userName: { fontSize: 20, fontWeight: "bold", color: "#2C3E50" },
+  userEmail: { fontSize: 14, color: "#95A5A6", marginTop: 5 },
+  highlightText: { fontWeight: 'bold', color: '#FF9900' },
+  userStatsContainer: { flexDirection: "row", justifyContent: "space-around", width: "100%", borderTopWidth: 1, borderTopColor: "#ECF0F1", paddingTop: 20, marginTop: 20 },
+  userStat: { alignItems: "center" },
+  userStatValue: { fontSize: 16, fontWeight: "bold", color: "#2C3E50" },
+  userStatLabel: { fontSize: 11, color: "#95A5A6", marginTop: 3 },
+  section: { marginBottom: 25 },
+  sectionTitle: { fontSize: 16, fontWeight: "bold", color: "#2C3E50", marginBottom: 15, marginLeft: 5 },
+  teammateItem: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", padding: 12, borderRadius: 12, marginBottom: 8, gap: 12 },
+  teammateAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#1A1F3A", justifyContent: "center", alignItems: "center" },
+  teammateInitial: { color: "#FFF", fontWeight: "bold" },
+  teammateInfo: { flex: 1 },
+  teammateName: { fontSize: 14, fontWeight: "600", color: "#2C3E50" },
+  teammateEmail: { fontSize: 12, color: "#95A5A6" },
+  youBadge: { backgroundColor: "#E8F4FD", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  youText: { fontSize: 10, fontWeight: "bold", color: "#3498DB" },
+  settingsItem: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", padding: 15, borderRadius: 12, gap: 12 },
+  settingsItemIcon: { fontSize: 18 },
+  logoutText: { fontSize: 14, fontWeight: "bold", color: '#E74C3C' },
+  footerSpacing: { height: 40 }
 });
