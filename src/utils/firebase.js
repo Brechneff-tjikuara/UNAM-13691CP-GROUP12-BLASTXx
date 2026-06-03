@@ -8,15 +8,15 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-// REPLACE WITH YOUR ACTUAL FIREBASE CONFIG FROM CONSOLE
+// Initialize Firebase with environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyBcHy_ee5Vwd8qht2lx6yoov1b0Wq91IEU",
-  authDomain: "project-b6381ba6-25b7-4169-8c5.firebaseapp.com",
-  databaseURL: "https://project-b6381ba6-25b7-4169-8c5-default-rtdb.firebaseio.com",
-  projectId: "project-b6381ba6-25b7-4169-8c5",
-  storageBucket: "project-b6381ba6-25b7-4169-8c5.firebasestorage.app",
-  messagingSenderId: "427442428387",
-  appId: "1:427442428387:web:47ba0aaab53f9075d068d6"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
