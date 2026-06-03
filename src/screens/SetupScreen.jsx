@@ -17,9 +17,9 @@ const SetupScreen = () => {
   const [setupData, setSetupData] = useState({
     companyName: "",
     industry: "",
-    targetAudience: "",
-    emailProvider: "",
-    smsProvider: "",
+    mineType: "",
+    explosiveProvider: "",
+    detonatorType: "",
     apiKey: "",
   });
 
@@ -36,8 +36,9 @@ const SetupScreen = () => {
         await storage.updateCompanyInfo(uData.companyCode, {
           name: setupData.companyName,
           industry: setupData.industry,
-          emailProvider: setupData.emailProvider,
-          smsProvider: setupData.smsProvider,
+          mineType: setupData.mineType,
+          explosiveProvider: setupData.explosiveProvider,
+          detonatorType: setupData.detonatorType,
           apiKey: setupData.apiKey,
         });
         navigation.reset({
@@ -73,13 +74,13 @@ const SetupScreen = () => {
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Welcome to BlastX!</Text>
             <Text style={styles.stepDescription}>
-              Let's get your blast scheduling app set up in just a few steps.
-              We'll configure your account and blast preferences.
+              Let's get your mine's blast management app set up.
+              We'll configure your site profile and operational preferences.
             </Text>
             <View style={styles.welcomeCard}>
-              <Text style={styles.welcomeIcon}>🚀</Text>
+              <Text style={styles.welcomeIcon}>⚒️</Text>
               <Text style={styles.welcomeText}>
-                Send targeted blasts to thousands of customers with ease
+                Plan, track, and record blast activities for maximum safety and productivity.
               </Text>
             </View>
           </View>
@@ -87,12 +88,12 @@ const SetupScreen = () => {
       case 2:
         return (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Company Information</Text>
+            <Text style={styles.stepTitle}>Mine Information</Text>
             <Text style={styles.stepDescription}>
-              Tell us about your business so we can personalize your experience.
+              Tell us about your operation to personalize your experience.
             </Text>
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Company Name</Text>
+              <Text style={styles.inputLabel}>Mine/Company Name</Text>
               <TextInput
                 style={styles.textInput}
                 placeholder="Enter your company name"
@@ -103,101 +104,106 @@ const SetupScreen = () => {
               />
             </View>
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Industry</Text>
+              <Text style={styles.inputLabel}>Commodity (e.g., Gold, Coal, Iron)</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g., Retail, Technology, Healthcare"
+                placeholder="e.g., Gold, Coal, Iron"
                 value={setupData.industry}
                 onChangeText={(value) => handleInputChange("industry", value)}
               />
             </View>
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Target Audience</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Describe your target customers"
-                value={setupData.targetAudience}
-                onChangeText={(value) =>
-                  handleInputChange("targetAudience", value)
-                }
-                multiline
-                numberOfLines={3}
-              />
+              <Text style={styles.inputLabel}>Mine Type</Text>
+              <View style={styles.providerOptions}>
+                <Pressable
+                  style={[
+                    styles.providerOption,
+                    setupData.mineType === "open_pit" &&
+                      styles.selectedOption,
+                  ]}
+                  onPress={() => handleInputChange("mineType", "open_pit")}
+                >
+                  <Text style={styles.providerText}>Open Pit</Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.providerOption,
+                    setupData.mineType === "underground" &&
+                      styles.selectedOption,
+                  ]}
+                  onPress={() =>
+                    handleInputChange("mineType", "underground")
+                  }
+                >
+                  <Text style={styles.providerText}>Underground</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         );
       case 3:
         return (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Communication Channels</Text>
+            <Text style={styles.stepTitle}>Explosives & Detonators</Text>
             <Text style={styles.stepDescription}>
-              Connect your email and SMS services to start sending blasts.
+              Configure your primary supply chain for blast records.
             </Text>
             <View style={styles.channelContainer}>
-              <Text style={styles.channelTitle}>📧 Email Provider</Text>
+              <Text style={styles.channelTitle}>🧨 Explosive Provider</Text>
               <View style={styles.providerOptions}>
                 <Pressable
                   style={[
                     styles.providerOption,
-                    setupData.emailProvider === "sendgrid" &&
+                    setupData.explosiveProvider === "orica" &&
                       styles.selectedOption,
                   ]}
-                  onPress={() => handleInputChange("emailProvider", "sendgrid")}
+                  onPress={() => handleInputChange("explosiveProvider", "orica")}
                 >
-                  <Text style={styles.providerText}>SendGrid</Text>
+                  <Text style={styles.providerText}>Orica</Text>
                 </Pressable>
                 <Pressable
                   style={[
                     styles.providerOption,
-                    setupData.emailProvider === "mailchimp" &&
+                    setupData.explosiveProvider === "dyno" &&
                       styles.selectedOption,
                   ]}
                   onPress={() =>
-                    handleInputChange("emailProvider", "mailchimp")
+                    handleInputChange("explosiveProvider", "dyno")
                   }
                 >
-                  <Text style={styles.providerText}>Mailchimp</Text>
+                  <Text style={styles.providerText}>Dyno Nobel</Text>
                 </Pressable>
                 <Pressable
                   style={[
                     styles.providerOption,
-                    setupData.emailProvider === "smtp" && styles.selectedOption,
+                    setupData.explosiveProvider === "other" && styles.selectedOption,
                   ]}
-                  onPress={() => handleInputChange("emailProvider", "smtp")}
+                  onPress={() => handleInputChange("explosiveProvider", "other")}
                 >
-                  <Text style={styles.providerText}>Custom SMTP</Text>
+                  <Text style={styles.providerText}>Other</Text>
                 </Pressable>
               </View>
             </View>
             <View style={styles.channelContainer}>
-              <Text style={styles.channelTitle}>📱 SMS Provider</Text>
+              <Text style={styles.channelTitle}>⚡ Detonator Type</Text>
               <View style={styles.providerOptions}>
                 <Pressable
                   style={[
                     styles.providerOption,
-                    setupData.smsProvider === "twilio" && styles.selectedOption,
+                    setupData.detonatorType === "electronic" && styles.selectedOption,
                   ]}
-                  onPress={() => handleInputChange("smsProvider", "twilio")}
+                  onPress={() => handleInputChange("detonatorType", "electronic")}
                 >
-                  <Text style={styles.providerText}>Twilio</Text>
+                  <Text style={styles.providerText}>Electronic</Text>
                 </Pressable>
                 <Pressable
                   style={[
                     styles.providerOption,
-                    setupData.smsProvider === "aws" && styles.selectedOption,
+                    setupData.detonatorType === "nonel" && styles.selectedOption,
                   ]}
-                  onPress={() => handleInputChange("smsProvider", "aws")}
+                  onPress={() => handleInputChange("detonatorType", "nonel")}
                 >
-                  <Text style={styles.providerText}>AWS SNS</Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.providerOption,
-                    setupData.smsProvider === "skip" && styles.selectedOption,
-                  ]}
-                  onPress={() => handleInputChange("smsProvider", "skip")}
-                >
-                  <Text style={styles.providerText}>Skip for now</Text>
+                  <Text style={styles.providerText}>Nonel</Text>
                 </Pressable>
               </View>
             </View>
@@ -206,33 +212,21 @@ const SetupScreen = () => {
       case 4:
         return (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>API Configuration</Text>
+            <Text style={styles.stepTitle}>Operational Configuration</Text>
             <Text style={styles.stepDescription}>
-              Enter your API keys to connect your services. You can skip this
-              and add them later.
+              Review your setup. You can adjust these settings at any time from the profile menu.
             </Text>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>API Key</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter your API key"
-                value={setupData.apiKey}
-                onChangeText={(value) => handleInputChange("apiKey", value)}
-                secureTextEntry
-              />
-            </View>
             <View style={styles.infoCard}>
-              <Text style={styles.infoIcon}>ℹ️</Text>
+              <Text style={styles.infoIcon}>🛡️</Text>
               <Text style={styles.infoText}>
-                Your API keys are encrypted and stored securely. You can update
-                them anytime in settings.
+                BlastX prioritizes site safety. All blast operations require multiple safety sign-offs before the timer can be activated.
               </Text>
             </View>
             <View style={styles.setupComplete}>
-              <Text style={styles.completeIcon}>✅</Text>
-              <Text style={styles.completeTitle}>Setup Complete!</Text>
+              <Text style={styles.completeIcon}>⚒️</Text>
+              <Text style={styles.completeTitle}>Ready for Operations!</Text>
               <Text style={styles.completeText}>
-                You're all set to start creating amazing blast campaigns.
+                You're all set to start planning and recording your mine's blast activities.
               </Text>
             </View>
           </View>
