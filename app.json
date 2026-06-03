@@ -40,7 +40,8 @@
     },
     "plugins": [
       "expo-sharing",
-      "expo-font"
+      "expo-font",
+      "expo-notifications"
     ]
   }
 }
