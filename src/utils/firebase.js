@@ -19,6 +19,13 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
+// Debug: Check if config is loaded (do not log sensitive keys in production)
+if (!firebaseConfig.apiKey) {
+  console.error("FIREBASE ERROR: API Key is missing. Check your .env file and restart the bundler.");
+} else {
+  console.log("Firebase Config: API Key detected (starts with " + firebaseConfig.apiKey.substring(0, 5) + ")");
+}
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
