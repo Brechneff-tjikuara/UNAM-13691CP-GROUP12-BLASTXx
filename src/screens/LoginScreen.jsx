@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import logo from "../utils/assets/images/light icon (1).png";
+import logo from "../../assets/logo.png";
 import { auth, db } from "../utils/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
