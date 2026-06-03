@@ -126,36 +126,47 @@ const DashboardScreen = () => {
         <View style={styles.statsContainer}>
           <View style={[styles.statCard, { backgroundColor: "#1A1F3A" }]}>
             <Text style={styles.statNumber}>{stats.scheduled}</Text>
-            <Text style={styles.statLabel}>Active Timers</Text>
+            <Text style={styles.statLabel}>Pending Blasts</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: "#FF9900" }]}>
             <Text style={styles.statNumber}>{stats.total}</Text>
-            <Text style={styles.statLabel}>Total Events</Text>
+            <Text style={styles.statLabel}>Total Operations</Text>
           </View>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Launch Control</Text>
+          <Text style={styles.sectionTitle}>Blast Control</Text>
           <Pressable
             style={[styles.actionButton, { backgroundColor: "#2ECC71" }]}
             onPress={() => navigation.navigate("PlanEvent")}
           >
-            <Text style={styles.actionButtonIcon}>📅</Text>
-            <Text style={styles.actionButtonText}>Plan New Event</Text>
+            <Text style={styles.actionButtonIcon}>💥</Text>
+            <Text style={styles.actionButtonText}>Plan New Blast</Text>
           </Pressable>
         </View>
 
         {/* Recent Event History Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Events</Text>
+          <Text style={styles.sectionTitle}>Recent Operations</Text>
           {events.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No events planned yet.</Text>
+              <Text style={styles.emptyStateText}>No operations recorded yet.</Text>
             </View>
           ) : (
             events.map((event) => (
-              <View key={event.id} style={styles.historyItem}>
+              <Pressable 
+                key={event.id} 
+                style={styles.historyItem}
+                onPress={() => {
+                  if (event.status === "Scheduled") {
+                    navigation.navigate("RecordResult", { 
+                      blastId: event.id, 
+                      blastTitle: event.title 
+                    });
+                  }
+                }}
+              >
                 <View
                   style={[
                     styles.historyStatus,
@@ -169,13 +180,19 @@ const DashboardScreen = () => {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.historyTitle}>{event.title}</Text>
                   <Text style={styles.historyTime}>
-                    Created: {formatDate(event.createdAt)}
+                    {event.status === "Scheduled" ? "Scheduled" : "Completed"}: {formatDate(event.createdAt)}
                   </Text>
                 </View>
-                <View style={styles.badge}>
-                   <Text style={styles.badgeText}>{event.status}</Text>
-                </View>
-              </View>
+                {event.status === "Scheduled" ? (
+                  <View style={[styles.badge, { backgroundColor: "#E8F4FD" }]}>
+                    <Text style={[styles.badgeText, { color: "#3498DB" }]}>Record Result</Text>
+                  </View>
+                ) : (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{event.status}</Text>
+                  </View>
+                )}
+              </Pressable>
             ))
           )}
         </View>
