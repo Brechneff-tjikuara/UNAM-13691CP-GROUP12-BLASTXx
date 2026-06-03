@@ -19,20 +19,28 @@ const ProfileScreen = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadProfileData();
-  }, []);
+    let isMounted = true;
 
-  const loadProfileData = async () => {
-    setLoading(true);
-    const data = await storage.getUserData();
-    setUserData(data);
-    
-    if (data) {
-      const team = await storage.getTeammates();
-      setTeammates(team);
-    }
-    setLoading(false);
-  };
+    const loadProfileData = async () => {
+      setLoading(true);
+      const data = await storage.getUserData();
+      
+      if (!isMounted) return;
+      setUserData(data);
+      
+      if (data) {
+        const team = await storage.getTeammates();
+        if (isMounted) setTeammates(team);
+      }
+      if (isMounted) setLoading(false);
+    };
+
+    loadProfileData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -54,11 +62,29 @@ const ProfileScreen = () => {
 
   if (loading && !userData) {
     return (
-      <View style={[styles.container, { justifyContent: 'center' }]}>
+      <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#FF9900" />
       </View>
     );
   }
+
+  // Component to render individual teammate items cleanly
+  const renderTeammember = ({ item: member }) => (
+    <View style={styles.teammateItem}>
+      <View style={styles.teammateAvatar}>
+        <Text style={styles.teammateInitial}>{member.name?.charAt(0) || "U"}</Text>
+      </View>
+      <View style={styles.teammateInfo}>
+        <Text style={styles.teammateName}>{member.name}</Text>
+        <Text style={styles.teammateEmail}>{member.email}</Text>
+      </View>
+      {member.uid === userData?.uid && (
+        <View style={styles.youBadge}>
+          <Text style={styles.youText}>YOU</Text>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -78,7 +104,7 @@ const ProfileScreen = () => {
           </View>
           <Text style={styles.userName}>{userData?.company?.name || "Your Company"}</Text>
           <Text style={styles.userEmail}>
-            Code: <Text style={{ fontWeight: 'bold', color: '#FF9900' }}>{userData?.companyCode}</Text>
+            Code: <Text style={styles.highlightText}>{userData?.companyCode}</Text>
           </Text>
           
           <View style={styles.userStatsContainer}>
@@ -96,20 +122,12 @@ const ProfileScreen = () => {
         {/* Teammates Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Teammates ({teammates.length})</Text>
-          {teammates.map((member, index) => (
-            <View key={index} style={styles.teammateItem}>
-              <View style={styles.teammateAvatar}>
-                <Text style={styles.teammateInitial}>{member.name?.charAt(0) || "U"}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.teammateName}>{member.name}</Text>
-                <Text style={styles.teammateEmail}>{member.email}</Text>
-              </View>
-              {member.uid === userData?.uid && (
-                <View style={styles.youBadge}><Text style={styles.youText}>YOU</Text></View>
-              )}
-            </View>
-          ))}
+          <FlatList
+            data={teammates}
+            renderItem={renderTeammember}
+            keyExtractor={(_, index) => index.toString()}
+            scrollEnabled={false} // Keeps scrolling unified inside parent ScrollView
+          />
         </View>
 
         {/* Account Actions */}
@@ -117,11 +135,11 @@ const ProfileScreen = () => {
           <Text style={styles.sectionTitle}>Settings</Text>
           <Pressable style={styles.settingsItem} onPress={handleLogout}>
             <Text style={styles.settingsItemIcon}>🚪</Text>
-            <Text style={[styles.settingsItemTitle, { color: '#E74C3C' }]}>Logout from BlastX</Text>
+            <Text style={styles.logoutText}>Logout from BlastX</Text>
           </Pressable>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={styles.footerSpacing} />
       </ScrollView>
     </View>
   );
@@ -131,6 +149,7 @@ export default ProfileScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8F9FA" },
+  centerContent: { justifyContent: 'center' },
   header: {
     backgroundColor: "#1A1F3A",
     paddingTop: 50,
@@ -159,6 +178,7 @@ const styles = StyleSheet.create({
   avatar: { fontSize: 30 },
   userName: { fontSize: 20, fontWeight: "bold", color: "#2C3E50" },
   userEmail: { fontSize: 14, color: "#95A5A6", marginTop: 5 },
+  highlightText: { fontWeight: 'bold', color: '#FF9900' },
   userStatsContainer: { flexDirection: "row", justifyContent: "space-around", width: "100%", borderTopWidth: 1, borderTopColor: "#ECF0F1", paddingTop: 20, marginTop: 20 },
   userStat: { alignItems: "center" },
   userStatValue: { fontSize: 16, fontWeight: "bold", color: "#2C3E50" },
@@ -168,11 +188,13 @@ const styles = StyleSheet.create({
   teammateItem: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", padding: 12, borderRadius: 12, marginBottom: 8, gap: 12 },
   teammateAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#1A1F3A", justifyContent: "center", alignItems: "center" },
   teammateInitial: { color: "#FFF", fontWeight: "bold" },
+  teammateInfo: { flex: 1 },
   teammateName: { fontSize: 14, fontWeight: "600", color: "#2C3E50" },
   teammateEmail: { fontSize: 12, color: "#95A5A6" },
   youBadge: { backgroundColor: "#E8F4FD", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   youText: { fontSize: 10, fontWeight: "bold", color: "#3498DB" },
   settingsItem: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", padding: 15, borderRadius: 12, gap: 12 },
   settingsItemIcon: { fontSize: 18 },
-  settingsItemTitle: { fontSize: 14, fontWeight: "bold" },
+  logoutText: { fontSize: 14, fontWeight: "bold", color: '#E74C3C' },
+  footerSpacing: { height: 40 }
 });
