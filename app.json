@@ -4,11 +4,10 @@
     "slug": "BlastXApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/utils/assets/images/icon.jpg",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "splash": {
-      "image": "./src/utils/assets/images/light icon (1).png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -18,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/utils/assets/images/icon.jpg",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.blastx.marketing.app",
@@ -27,8 +26,7 @@
         "NOTIFICATIONS",
         "VIBRATE",
         "RECEIVE_BOOT_COMPLETED"
-      ],
-      "edgeToEdgeEnabled": true
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
