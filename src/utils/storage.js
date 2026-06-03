@@ -10,7 +10,8 @@ import {
   where, 
   orderBy,
   limit,
-  updateDoc
+  updateDoc,
+  onSnapshot
 } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -28,9 +29,10 @@ export const storage = {
       if (!user) return null;
 
       // Check Cache first
-      if (!forceRefresh) {
-        const cached = await AsyncStorage.getItem(KEYS.CACHED_USER);
-        if (cached) return JSON.parse(cached);
+      const cached = await AsyncStorage.getItem(KEYS.CACHED_USER);
+      if (!forceRefresh && cached) {
+        // Return cached immediately, then refresh in background if needed
+        return JSON.parse(cached);
       }
       
       const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -47,10 +49,11 @@ export const storage = {
         await AsyncStorage.setItem(KEYS.CACHED_USER, JSON.stringify(fullData));
         return fullData;
       }
-      return null;
+      return cached ? JSON.parse(cached) : null;
     } catch (e) {
       console.error("Error getting user data", e);
-      return null;
+      const cached = await AsyncStorage.getItem(KEYS.CACHED_USER);
+      return cached ? JSON.parse(cached) : null;
     }
   },
 
@@ -69,6 +72,8 @@ export const storage = {
   saveBlast: async (blast) => {
     try {
       const user = auth.currentUser;
+      if (!user) throw new Error("User not authenticated");
+
       const userDoc = await getDoc(doc(db, "users", user.uid));
       const companyCode = userDoc.data().companyCode;
 
@@ -80,8 +85,8 @@ export const storage = {
         createdByName: user.displayName || user.email,
       };
 
+      // Firestore will queue this if offline
       const docRef = await addDoc(collection(db, "blasts"), newBlast);
-      await AsyncStorage.removeItem(KEYS.CACHED_BLASTS);
       return { id: docRef.id, ...newBlast };
     } catch (e) {
       console.error("Error saving blast", e);
@@ -89,17 +94,52 @@ export const storage = {
     }
   },
 
+  onBlastsUpdate: (callback, maxResults = 20) => {
+    const user = auth.currentUser;
+    if (!user) return () => {};
+
+    let unsubscribe = () => {};
+
+    // First get the user's company code
+    storage.getUserData().then(uData => {
+      if (!uData || !uData.companyCode) return;
+
+      const q = query(
+        collection(db, "blasts"), 
+        where("companyCode", "==", uData.companyCode),
+        orderBy("createdAt", "desc"),
+        limit(maxResults)
+      );
+
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const blasts = [];
+        snapshot.forEach((doc) => {
+          blasts.push({ id: doc.id, ...doc.data() });
+        });
+        // Pass metadata to callback
+        callback(blasts, {
+          hasPendingWrites: snapshot.metadata.hasPendingWrites,
+          fromCache: snapshot.metadata.fromCache
+        });
+      }, (error) => {
+        console.error("Error in onBlastsUpdate snapshot", error);
+      });
+    });
+
+    return () => unsubscribe();
+  },
+
   getBlasts: async (maxResults = 20) => {
     try {
       const user = auth.currentUser;
       if (!user) return [];
 
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      const companyCode = userDoc.data().companyCode;
+      const uData = await storage.getUserData();
+      if (!uData) return [];
 
       const q = query(
         collection(db, "blasts"), 
-        where("companyCode", "==", companyCode),
+        where("companyCode", "==", uData.companyCode),
         orderBy("createdAt", "desc"),
         limit(maxResults)
       );
