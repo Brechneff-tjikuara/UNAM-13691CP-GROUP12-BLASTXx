@@ -16,7 +16,7 @@ const SetupScreen = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [setupData, setSetupData] = useState({
     companyName: "",
-    industry: "",
+    location: "",
     mineType: "",
     explosiveProvider: "",
     detonatorType: "",
@@ -35,7 +35,7 @@ const SetupScreen = () => {
       if (uData && uData.companyCode) {
         await storage.updateCompanyInfo(uData.companyCode, {
           name: setupData.companyName,
-          industry: setupData.industry,
+          location: setupData.location,
           mineType: setupData.mineType,
           explosiveProvider: setupData.explosiveProvider,
           detonatorType: setupData.detonatorType,
@@ -104,12 +104,12 @@ const SetupScreen = () => {
               />
             </View>
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Commodity (e.g., Gold, Coal, Iron)</Text>
+              <Text style={styles.inputLabel}>Location (City/Region)</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g., Gold, Coal, Iron"
-                value={setupData.industry}
-                onChangeText={(value) => handleInputChange("industry", value)}
+                placeholder="e.g., Kalgoorlie, WA"
+                value={setupData.location}
+                onChangeText={(value) => handleInputChange("location", value)}
               />
             </View>
             <View style={styles.inputContainer}>

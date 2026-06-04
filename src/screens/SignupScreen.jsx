@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import logo from "../../assets/logo.png";
+import logo from "../../assets/icon.png";
 import { auth, db } from "../utils/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
@@ -78,12 +78,14 @@ const SignupScreen = () => {
 
       // 3. Save User Profile
       console.log("Saving user profile to Firestore...");
+      const role = isNewCompany ? "admin" : "member";
       const userProfile = {
         uid: user.uid,
         name,
         email,
         companyCode: finalCode,
-        minePosition: "Mining Engineer", // Default role, can be updated in setup
+        role: role,
+        minePosition: isNewCompany ? "Admin / Site Manager" : "Mining Engineer",
         canCreateBlasts: true, // Default permission
         createdAt: new Date().toISOString(),
       };
@@ -102,8 +104,10 @@ const SignupScreen = () => {
           code: finalCode,
           name: name + "'s Company", // Default name, can be changed in setup
           createdAt: new Date().toISOString(),
-          createdBy: user.uid,
-          rbacEnabled: false,
+          registeredBy: user.uid,
+          rbacEnabled: true, // Default to true as per user description
+          location: "Not Set",
+          mineType: "Not Set",
         });
         console.log("Company record created.");
       }

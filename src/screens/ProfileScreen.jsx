@@ -11,6 +11,8 @@ import {
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { storage } from "../utils/storage";
+import logo from "../../assets/icon.png";
+import { Image } from "react-native";
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -100,7 +102,7 @@ const ProfileScreen = () => {
         {/* Company Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
-            <Text style={styles.avatar}>🏢</Text>
+            <Image source={logo} style={styles.avatarImage} />
           </View>
           <Text style={styles.userName}>{userData?.company?.name || "Your Company"}</Text>
           <Text style={styles.userEmail}>
@@ -129,6 +131,20 @@ const ProfileScreen = () => {
             scrollEnabled={false} // Keeps scrolling unified inside parent ScrollView
           />
         </View>
+
+        {/* Administration Section */}
+        {userData?.role === "admin" && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Administration</Text>
+            <Pressable 
+              style={styles.settingsItem} 
+              onPress={() => navigation.navigate("AdminPanel")}
+            >
+              <Text style={styles.settingsItemIcon}>🛡️</Text>
+              <Text style={styles.adminLinkText}>Manage Team & Roles</Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* Account Actions */}
         <View style={styles.section}>
@@ -175,6 +191,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   avatarContainer: { width: 70, height: 70, borderRadius: 35, backgroundColor: "#F0F3F4", justifyContent: "center", alignItems: "center", marginBottom: 15 },
+  avatarImage: { width: 50, height: 50, borderRadius: 10 },
   avatar: { fontSize: 30 },
   userName: { fontSize: 20, fontWeight: "bold", color: "#2C3E50" },
   userEmail: { fontSize: 14, color: "#95A5A6", marginTop: 5 },
@@ -195,6 +212,7 @@ const styles = StyleSheet.create({
   youText: { fontSize: 10, fontWeight: "bold", color: "#3498DB" },
   settingsItem: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", padding: 15, borderRadius: 12, gap: 12 },
   settingsItemIcon: { fontSize: 18 },
+  adminLinkText: { fontSize: 14, fontWeight: "bold", color: "#FF9900" },
   logoutText: { fontSize: 14, fontWeight: "bold", color: '#E74C3C' },
   footerSpacing: { height: 40 }
 });

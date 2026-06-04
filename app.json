@@ -23,7 +23,6 @@
       "package": "com.blastx.marketing.app",
       "versionCode": 1,
       "permissions": [
-        "NOTIFICATIONS",
         "VIBRATE",
         "RECEIVE_BOOT_COMPLETED"
       ]
@@ -40,8 +39,7 @@
     },
     "plugins": [
       "expo-sharing",
-      "expo-font",
-      "expo-notifications"
+      "expo-font"
     ]
   }
 }

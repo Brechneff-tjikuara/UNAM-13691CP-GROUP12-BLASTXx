@@ -20,6 +20,7 @@ const RecordResultScreen = () => {
   const { blastId, blastTitle } = route.params || {};
 
   const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState(null);
   const [resultData, setResultData] = useState({
     fragmentation: "",
     productivity: "",
@@ -27,8 +28,28 @@ const RecordResultScreen = () => {
     notes: "",
   });
 
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    const data = await storage.getUserData();
+    setUserData(data);
+    
+    if (data && !storage.canManageBlasts(data)) {
+      Alert.alert("Access Denied", "You do not have permission to record blast results.");
+      navigation.goBack();
+    }
+  };
+
   const handleSave = async () => {
-    if (!blastId) return;
+    if (!blastId || !userData) return;
+
+    if (!storage.canManageBlasts(userData)) {
+      Alert.alert("Error", "Unauthorized action.");
+      return;
+    }
+
     if (!resultData.fragmentation || !resultData.productivity) {
       Alert.alert("Input Error", "Please provide fragmentation and productivity metrics.");
       return;
@@ -36,7 +57,8 @@ const RecordResultScreen = () => {
 
     setLoading(true);
     try {
-      await updateDoc(doc(db, "blasts", blastId), {
+      const blastRef = doc(db, "companies", userData.companyCode, "blasts", blastId);
+      await updateDoc(blastRef, {
         status: "Completed",
         results: {
           ...resultData,

@@ -17,6 +17,7 @@ const PlanEventScreen = () => {
   const navigation = useNavigation();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState(null);
   const [eventData, setEventData] = useState({
     title: "",
     description: "",
@@ -26,6 +27,19 @@ const PlanEventScreen = () => {
     holeCount: "",
     explosiveType: "",
   });
+
+  useState(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    const data = await storage.getUserData();
+    setUserData(data);
+    if (data && !storage.canManageBlasts(data)) {
+      Alert.alert("Access Denied", "You do not have permission to plan blasts.");
+      navigation.goBack();
+    }
+  };
 
   // Safety Checklist
   const [checks, setChecks] = useState({

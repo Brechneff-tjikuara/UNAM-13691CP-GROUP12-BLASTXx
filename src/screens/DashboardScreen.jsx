@@ -2,6 +2,8 @@ import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { storage } from "../utils/storage";
+import logo from "../../assets/icon.png";
+import { Image } from "react-native";
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
@@ -79,6 +81,7 @@ const DashboardScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <Image source={logo} style={styles.headerLogo} />
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {userData?.company?.name || "BlastX"}
@@ -135,16 +138,41 @@ const DashboardScreen = () => {
         </View>
 
         {/* Action Buttons */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Blast Control</Text>
-          <Pressable
-            style={[styles.actionButton, { backgroundColor: "#2ECC71" }]}
-            onPress={() => navigation.navigate("PlanEvent")}
-          >
-            <Text style={styles.actionButtonIcon}>💥</Text>
-            <Text style={styles.actionButtonText}>Plan New Blast</Text>
-          </Pressable>
-        </View>
+        {storage.canManageBlasts(userData) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Blast Control</Text>
+            <Pressable
+              style={[styles.actionButton, { backgroundColor: "#2ECC71" }]}
+              onPress={() => navigation.navigate("PlanEvent")}
+            >
+              <Text style={styles.actionButtonIcon}>💥</Text>
+              <Text style={styles.actionButtonText}>Plan New Blast</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Admin Management Section */}
+        {userData?.role === "admin" && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Admin Management</Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                style={[styles.actionButton, { backgroundColor: "#FF9900", flex: 1 }]}
+                onPress={() => navigation.navigate("AdminPanel")}
+              >
+                <Text style={styles.actionButtonIcon}>🛡️</Text>
+                <Text style={styles.actionButtonText}>Members</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.actionButton, { backgroundColor: "#1A1F3A", flex: 1 }]}
+                onPress={() => navigation.navigate("Setup")}
+              >
+                <Text style={styles.actionButtonIcon}>⚙️</Text>
+                <Text style={styles.actionButtonText}>Mine Setup</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
 
         {/* Recent Event History Section */}
         <View style={styles.section}>
@@ -216,6 +244,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: { fontSize: 18, fontWeight: "bold", color: "#FFF", flex: 1 },
+  headerLogo: { width: 30, height: 30, borderRadius: 6, marginRight: 12 },
   syncingText: { fontSize: 10, color: "#FF9900", marginTop: 2, fontWeight: "600" },
   profileIcon: { backgroundColor: "rgba(255,255,255,0.1)", padding: 8, borderRadius: 20 },
   profileText: { fontSize: 18 },

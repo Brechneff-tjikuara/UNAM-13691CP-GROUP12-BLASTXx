@@ -10,8 +10,6 @@ A smart mining mobile application designed to streamline blast scheduling, enhan
 
 - 🔹 Blast scheduling and setup management
 
-- 🔹 Real-time safety alerts and notifications (future implementation) 
-  
 - 🔹 Historical data logging and reporting
 
 - 🔹 Centralized dashboard for operational control  

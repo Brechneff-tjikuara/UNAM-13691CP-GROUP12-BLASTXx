@@ -10,7 +10,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { storage } from "../utils/storage";
-import logo from "../../assets/logo.png";
+import logo from "../../assets/icon.png";
 
 const HomeScreen = () => {
   const navigation = useNavigation();

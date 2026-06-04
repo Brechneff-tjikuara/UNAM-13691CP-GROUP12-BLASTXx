@@ -11,7 +11,8 @@ import {
   orderBy,
   limit,
   updateDoc,
-  onSnapshot
+  onSnapshot,
+  deleteDoc
 } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -176,6 +177,67 @@ export const storage = {
     }
   },
 
+  promoteMember: async (memberUid) => {
+    try {
+      const uData = await storage.getUserData();
+      if (!uData) return false;
+
+      const companyCode = uData.companyCode;
+      const updates = { role: "admin" };
+
+      // Update in global users collection
+      await updateDoc(doc(db, "users", memberUid), updates);
+      // Update in company team subcollection
+      await updateDoc(doc(db, "companies", companyCode, "team", memberUid), updates);
+      
+      return true;
+    } catch (e) {
+      console.error("Error promoting member", e);
+      return false;
+    }
+  },
+
+  demoteMember: async (memberUid) => {
+    try {
+      const uData = await storage.getUserData();
+      if (!uData) return false;
+
+      const companyCode = uData.companyCode;
+      const updates = { role: "member" };
+
+      await updateDoc(doc(db, "users", memberUid), updates);
+      await updateDoc(doc(db, "companies", companyCode, "team", memberUid), updates);
+      
+      return true;
+    } catch (e) {
+      console.error("Error demoting member", e);
+      return false;
+    }
+  },
+
+  removeMember: async (memberUid) => {
+    try {
+      const uData = await storage.getUserData();
+      if (!uData) return false;
+
+      const companyCode = uData.companyCode;
+
+      // Update user record to clear company association
+      await updateDoc(doc(db, "users", memberUid), { 
+        companyCode: null, 
+        role: "member" 
+      });
+
+      // Remove from company team subcollection
+      await deleteDoc(doc(db, "companies", companyCode, "team", memberUid));
+      
+      return true;
+    } catch (e) {
+      console.error("Error removing member", e);
+      return false;
+    }
+  },
+
   // SETUP STATE
   isSetupComplete: async () => {
     try {
@@ -192,6 +254,33 @@ export const storage = {
       await AsyncStorage.clear();
     } catch (e) {
       console.error("Error clearing storage", e);
+    }
+  },
+
+  canManageBlasts: (userData) => {
+    if (!userData) return false;
+    // Admins always have access
+    if (userData.role === "admin") return true;
+    
+    // If RBAC is disabled, everyone can manage blasts
+    if (userData.company && userData.company.rbacEnabled === false) {
+      return true;
+    }
+    
+    const position = userData.minePosition?.toLowerCase() || "";
+    const allowedKeywords = ["engineer", "analyst", "specialist"];
+    
+    return allowedKeywords.some(keyword => position.includes(keyword));
+  },
+
+  toggleRBAC: async (companyCode, isEnabled) => {
+    try {
+      await updateDoc(doc(db, "companies", companyCode), { rbacEnabled: isEnabled });
+      await AsyncStorage.removeItem(KEYS.CACHED_USER); // Force refresh cache
+      return true;
+    } catch (e) {
+      console.error("Error toggling RBAC", e);
+      return false;
     }
   },
 };
