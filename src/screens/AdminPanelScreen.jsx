@@ -17,7 +17,10 @@ const AdminPanelScreen = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+<<<<<<< HEAD
   const [rbacEnabled, setRbacEnabled] = useState(true);
+=======
+>>>>>>> 6888ba485e53225e77ef5712c45f1bd0c01cfc13
 
   useEffect(() => {
     fetchMembers();
@@ -27,6 +30,7 @@ const AdminPanelScreen = () => {
   const loadCurrentUser = async () => {
     const data = await storage.getUserData();
     setCurrentUser(data);
+<<<<<<< HEAD
     if (data?.company) {
       setRbacEnabled(data.company.rbacEnabled !== false);
     }
@@ -41,6 +45,8 @@ const AdminPanelScreen = () => {
     } else {
       Alert.alert("Error", "Failed to update RBAC settings.");
     }
+=======
+>>>>>>> 6888ba485e53225e77ef5712c45f1bd0c01cfc13
   };
 
   const fetchMembers = async () => {
@@ -163,6 +169,7 @@ const AdminPanelScreen = () => {
         <Text style={styles.title}>Admin Panel</Text>
       </View>
 
+<<<<<<< HEAD
       <View style={styles.settingsSection}>
         <View style={styles.settingItem}>
           <View style={{ flex: 1 }}>
@@ -178,6 +185,8 @@ const AdminPanelScreen = () => {
         </View>
       </View>
 
+=======
+>>>>>>> 6888ba485e53225e77ef5712c45f1bd0c01cfc13
       {loading ? (
         <ActivityIndicator size="large" color="#FF9900" style={{ marginTop: 50 }} />
       ) : (
@@ -186,7 +195,10 @@ const AdminPanelScreen = () => {
           keyExtractor={(item) => item.uid}
           renderItem={renderMember}
           contentContainerStyle={styles.listContent}
+<<<<<<< HEAD
           ListHeaderComponent={<Text style={styles.listTitle}>Manage Team</Text>}
+=======
+>>>>>>> 6888ba485e53225e77ef5712c45f1bd0c01cfc13
           ListEmptyComponent={
             <Text style={styles.emptyText}>No members found.</Text>
           }
@@ -224,6 +236,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FFF",
   },
+<<<<<<< HEAD
   settingsSection: {
     backgroundColor: "#FFF",
     padding: 20,
@@ -277,6 +290,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1A1F3A",
     marginBottom: 15,
+=======
+  listContent: {
+    padding: 20,
+>>>>>>> 6888ba485e53225e77ef5712c45f1bd0c01cfc13
   },
   memberCard: {
     backgroundColor: "#FFF",
