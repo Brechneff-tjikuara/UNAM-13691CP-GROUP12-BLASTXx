@@ -11,10 +11,12 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.blastx.marketing.app"
     },
+    
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -27,16 +29,19 @@
         "RECEIVE_BOOT_COMPLETED"
       ]
     },
+    
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
+    
     "scheme": "blastx-app",
     "extra": {
       "eas": {
         "projectId": "d9ee5591-5801-4436-8cba-ff95270e38a7"
       }
     },
+    
     "plugins": [
       "expo-sharing",
       "expo-font"
