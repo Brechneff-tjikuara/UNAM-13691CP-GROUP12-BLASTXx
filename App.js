@@ -59,12 +59,14 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#FFF",
   },
+  
   errorTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#E74C3C",
     marginBottom: 10,
   },
+  
   errorText: {
     fontSize: 14,
     color: "#7F8C8D",
