@@ -1,26 +1,34 @@
-import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import React, { useEffect, useState, useCallback } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  Pressable,
+  ActivityIndicator,
+  Image,
+} from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+
+// Configuration, Storage and Assets
 import { storage } from "../utils/storage";
 import logo from "../../assets/icon.png";
-import { Image } from "react-native";
 
-const DashboardScreen = () => {
+const ProfileScreen = () => {
   const navigation = useNavigation();
+
+  // Core Data States
   const [userData, setUserData] = useState(null);
   const [events, setEvents] = useState([]);
   const [nextEvent, setNextEvent] = useState(null);
+  
+  // Status States
   const [loading, setLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [stats, setStats] = useState({
-    total: 0,
-    scheduled: 0,
-    completed: 0,
-    failed: 0,
-  });
 
+  // Countdown State Engine
   const [timeLeft, setTimeLeft] = useState({ days: "00", hours: "00", mins: "00" });
 
+  // Real-time Event Subscription & Mounting Context
   useFocusEffect(
     useCallback(() => {
       let unsubscribeBlasts = () => {};
@@ -30,8 +38,7 @@ const DashboardScreen = () => {
         const data = await storage.getUserData();
         setUserData(data);
 
-        // storage.onBlastsUpdate now needs to provide metadata or we handle it here
-        // Let's modify storage.onBlastsUpdate to pass metadata
+        // Subscribing to real-time changes inside company collection
         unsubscribeBlasts = storage.onBlastsUpdate((eData, metadata) => {
           setEvents(eData);
           updateStats(eData);
@@ -48,8 +55,43 @@ const DashboardScreen = () => {
     }, [])
   );
 
+  // Background Live Ticker Calculation Engine for Launch Time
+  useEffect(() => {
+    if (!nextEvent || !nextEvent.launchDate) {
+      setTimeLeft({ days: "00", hours: "00", mins: "00" });
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const targetTime = new Date(nextEvent.launchDate).getTime();
+      const currentTime = new Date().getTime();
+      const difference = targetTime - currentTime;
+
+      if (difference <= 0) {
+        setTimeLeft({ days: "00", hours: "00", mins: "00" });
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+
+      setTimeLeft({
+        days: days < 10 ? `0${days}` : `${days}`,
+        hours: hours < 10 ? `0${hours}` : `${hours}`,
+        mins: minutes < 10 ? `0${minutes}` : `${minutes}`,
+      });
+    };
+
+    calculateTimeLeft(); // Run calculation instantly on reference match
+    const intervalId = setInterval(calculateTimeLeft, 60000); // Poll computation every minute
+
+    return () => clearInterval(intervalId);
+  }, [nextEvent]);
+
+  // UI Calculation Utilities
   const updateStats = (eData) => {
-    const scheduled = eData.filter(e => e.status === "Scheduled");
+    const scheduled = eData.filter((e) => e.status === "Scheduled");
     if (scheduled.length > 0) {
       setNextEvent(scheduled[0]);
     } else {
@@ -59,30 +101,89 @@ const DashboardScreen = () => {
     setStats({
       total: eData.length,
       scheduled: scheduled.length,
-      completed: eData.filter(e => e.status === "Completed").length,
-      failed: eData.filter(e => e.status === "Failed").length,
+      completed: eData.filter((e) => e.status === "Completed").length,
+      failed: eData.filter((e) => e.status === "Failed").length,
     });
   };
+
+  // Live countdown background ticking processor
+  useEffect(() => {
+    if (!nextEvent?.launchDate) {
+      setTimeLeft({ days: "00", hours: "00", mins: "00" });
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      // Replace spacing gaps with standard ISO 'T' layouts to guarantee stable cross-browser execution
+      const standardizedDate = nextEvent.launchDate.replace(" ", "T");
+      const targetTime = new Date(standardizedDate).getTime();
+      const difference = targetTime - Date.now();
+
+      if (difference <= 0) {
+        setTimeLeft({ days: "00", hours: "00", mins: "00" });
+        return;
+      }
+
+      // Time breakdown calculations
+      const d = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const h = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+
+      setTimeLeft({
+        days: d < 10 ? `0${d}` : `${d}`,
+        hours: h < 10 ? `0${h}` : `${h}`,
+        mins: m < 10 ? `0${m}` : `${m}`,
+      });
+    };
+
+    // Initialize timer immediately on hook evaluation loop to bypass layout lag
+    calculateTimeLeft();
+
+    // Re-verify difference values dynamically every single second
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [nextEvent]);
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   };
 
+  // Loading Screen View
   if (loading && !userData) {
     return (
-      <View style={[styles.container, { justifyContent: 'center' }]}>
+      <View style={[styles.container, { justifyContent: "center" }]}>
         <ActivityIndicator size="large" color="#FF9900" />
       </View>
     );
   }
 
+  // Component to render individual teammate items cleanly
+  const renderTeammember = ({ item: member }) => (
+    <View style={styles.teammateItem}>
+      <View style={styles.teammateAvatar}>
+        <Text style={styles.teammateInitial}>{member.name?.charAt(0) || "U"}</Text>
+      </View>
+      <View style={styles.teammateInfo}>
+        <Text style={styles.teammateName}>{member.name}</Text>
+        <Text style={styles.teammateEmail}>{member.email}</Text>
+      </View>
+      {member.uid === userData?.uid && (
+        <View style={styles.youBadge}>
+          <Text style={styles.youText}>YOU</Text>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
+      {/* Header section wrapper */}
       <View style={styles.header}>
         <Image source={logo} style={styles.headerLogo} />
-        <View style={{ flex: 1 }}>
+        <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {userData?.company?.name || "BlastX"}
           </Text>
@@ -96,7 +197,7 @@ const DashboardScreen = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Countdown Timer Section */}
+        {/* Countdown Timer Card */}
         {nextEvent ? (
           <View style={styles.timerCard}>
             <Text style={styles.timerLabel}>NEXT LAUNCH: {nextEvent.title}</Text>
@@ -125,19 +226,30 @@ const DashboardScreen = () => {
           </View>
         )}
 
-        {/* Quick Stats */}
+        {/* Quick Operational Status Block */}
         <View style={styles.statsContainer}>
           <View style={[styles.statCard, { backgroundColor: "#1A1F3A" }]}>
             <Text style={styles.statNumber}>{stats.scheduled}</Text>
             <Text style={styles.statLabel}>Pending Blasts</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: "#FF9900" }]}>
-            <Text style={styles.statNumber}>{stats.total}</Text>
-            <Text style={styles.statLabel}>Total Operations</Text>
+          <Text style={styles.userName}>{userData?.company?.name || "Your Company"}</Text>
+          <Text style={styles.userEmail}>
+            Code: <Text style={styles.highlightText}>{userData?.companyCode}</Text>
+          </Text>
+          
+          <View style={styles.userStatsContainer}>
+            <View style={styles.userStat}>
+              <Text style={styles.userStatValue}>{teammates.length}</Text>
+              <Text style={styles.userStatLabel}>Teammates</Text>
+            </View>
+            <View style={styles.userStat}>
+              <Text style={styles.userStatValue}>{userData?.company?.industry || "N/A"}</Text>
+              <Text style={styles.userStatLabel}>Industry</Text>
+            </View>
           </View>
         </View>
 
-        {/* Action Buttons */}
+        {/* Blast Operations Action Control */}
         {storage.canManageBlasts(userData) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Blast Control</Text>
@@ -151,7 +263,7 @@ const DashboardScreen = () => {
           </View>
         )}
 
-        {/* Admin Management Section */}
+        {/* Administrator Configuration Actions */}
         {userData?.role === "admin" && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Admin Management</Text>
@@ -174,7 +286,7 @@ const DashboardScreen = () => {
           </View>
         )}
 
-        {/* Recent Event History Section */}
+        {/* Recent Operation Event Logs */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Operations</Text>
           {events.length === 0 ? (
@@ -183,14 +295,14 @@ const DashboardScreen = () => {
             </View>
           ) : (
             events.map((event) => (
-              <Pressable 
-                key={event.id} 
+              <Pressable
+                key={event.id}
                 style={styles.historyItem}
                 onPress={() => {
                   if (event.status === "Scheduled") {
-                    navigation.navigate("RecordResult", { 
-                      blastId: event.id, 
-                      blastTitle: event.title 
+                    navigation.navigate("RecordResult", {
+                      blastId: event.id,
+                      blastTitle: event.title,
                     });
                   }
                 }}
@@ -224,16 +336,19 @@ const DashboardScreen = () => {
             ))
           )}
         </View>
-        <View style={{ height: 40 }} />
+
+        <View style={styles.footerSpacing} />
       </ScrollView>
     </View>
   );
 };
 
-export default DashboardScreen;
+export default ProfileScreen;
 
+// Stylesheets
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8F9FA" },
+  centerContent: { justifyContent: 'center' },
   header: {
     backgroundColor: "#1A1F3A",
     paddingTop: 50,
@@ -243,74 +358,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#FFF", flex: 1 },
+  headerTitleContainer: { flex: 1 },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#FFF" },
   headerLogo: { width: 30, height: 30, borderRadius: 6, marginRight: 12 },
   syncingText: { fontSize: 10, color: "#FF9900", marginTop: 2, fontWeight: "600" },
   profileIcon: { backgroundColor: "rgba(255,255,255,0.1)", padding: 8, borderRadius: 20 },
   profileText: { fontSize: 18 },
   content: { flex: 1, padding: 15 },
-  timerCard: {
-    backgroundColor: "#1A1F3A",
+  profileCard: {
+    backgroundColor: "#FFF",
     borderRadius: 20,
     padding: 25,
     alignItems: "center",
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  timerLabel: { color: "#FF9900", fontWeight: "bold", fontSize: 12, letterSpacing: 1, marginBottom: 15 },
-  countdownContainer: { flexDirection: "row", alignItems: "center", gap: 10 },
-  timeBox: { alignItems: "center" },
-  timeValue: { color: "#FFF", fontSize: 36, fontWeight: "bold" },
-  timeUnit: { color: "#95A5A6", fontSize: 10, marginTop: -5 },
-  timeDivider: { color: "#FFF", fontSize: 24, fontWeight: "bold", marginTop: -15 },
-  launchDateText: { color: "#95A5A6", fontSize: 12, marginTop: 20 },
-  emptyTimerCard: {
-    padding: 30,
-    backgroundColor: "#FFF",
-    borderRadius: 20,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ECF0F1",
-    marginBottom: 20,
-  },
-  emptyTimerText: { fontSize: 16, fontWeight: "bold", color: "#2C3E50" },
-  emptyTimerSub: { fontSize: 12, color: "#95A5A6", marginTop: 5, textAlign: "center" },
-  statsContainer: { flexDirection: "row", gap: 12, marginBottom: 20 },
-  statCard: {
-    flex: 1,
-    borderRadius: 15,
-    padding: 15,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  statNumber: { fontSize: 20, fontWeight: "bold", color: "#FFF" },
-  statLabel: { fontSize: 10, color: "rgba(255,255,255,0.7)", marginTop: 2 },
-  section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: "bold", color: "#2C3E50", marginBottom: 15 },
-  actionButton: {
-    flexDirection: "row",
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 10,
-    alignItems: "center",
-    gap: 12,
-  },
-  actionButtonText: { fontSize: 14, fontWeight: "bold", color: "#FFF" },
-  actionButtonIcon: { fontSize: 20 },
-  historyItem: {
-    flexDirection: "row",
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 10,
-    alignItems: "center",
-    gap: 12,
-    borderWidth: 1,
-    borderColor: "#ECF0F1",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    elevation: 2,
   },
   historyStatus: { width: 35, height: 35, borderRadius: 10, justifyContent: "center", alignItems: "center" },
   historyStatusIcon: { fontSize: 16 },

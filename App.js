@@ -6,6 +6,9 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./src/utils/firebase";
 import AppNavigator from "./src/navigation/AppNavigator";
 
+
+
+
 // Basic Error Boundary for Web/Native Stability
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
@@ -33,6 +36,7 @@ export default function App() {
       }
     });
 
+    
     return () => {
       unsubscribe();
     };
@@ -59,12 +63,14 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#FFF",
   },
+  
   errorTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#E74C3C",
     marginBottom: 10,
   },
+  
   errorText: {
     fontSize: 14,
     color: "#7F8C8D",

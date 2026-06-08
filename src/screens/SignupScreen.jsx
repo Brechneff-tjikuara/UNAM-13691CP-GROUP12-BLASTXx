@@ -31,16 +31,17 @@ const SignupScreen = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   };
 
-  const handleSignup = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
-    }
+const handleSignup = async () => {
+  if (!email || !password || !name) {
+    Alert.alert("Error", "Please fill in all required fields");
+    return;
+  }
 
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
-      return;
-    }
+  setLoading(true);
+  try {
+    // 1. Create the user in Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
     setLoading(true);
     try {
@@ -50,9 +51,10 @@ const SignupScreen = () => {
       const user = userCredential.user;
       console.log("Auth user created:", user.uid);
 
-      // 2. Determine Company Code (Use existing or generate new)
-      let finalCode = companyCode.trim().toUpperCase();
-      let isNewCompany = false;
+    // 3. Handle Firestore safely
+    if (finalCompanyCode) {
+      const companyRef = doc(db, "companies", finalCompanyCode);
+      const companySnap = await getDoc(companyRef);
 
       if (!finalCode) {
         finalCode = generateCode();
@@ -112,9 +114,8 @@ const SignupScreen = () => {
         console.log("Company record created.");
       }
 
-      Alert.alert("Success", `Account created! Your Company Code is: ${finalCode}`, [
-        { text: "Continue", onPress: () => navigation.navigate("Setup") }
-      ]);
+    Alert.alert("Success", "Account created successfully!");
+    // navigation.navigate("Home");
 
     } catch (error) {
       console.error("SIGNUP ERROR:", error);
