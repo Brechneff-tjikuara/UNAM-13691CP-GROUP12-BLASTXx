@@ -14,7 +14,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { storage } from "../utils/storage";
 import logo from "../../assets/icon.png";
 
-const DashboardScreen = () => {
+const ProfileScreen = () => {
   const navigation = useNavigation();
 
   // Core Data States
@@ -24,13 +24,6 @@ const DashboardScreen = () => {
   
   // Status States
   const [loading, setLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [stats, setStats] = useState({
-    total: 0,
-    scheduled: 0,
-    completed: 0,
-    failed: 0,
-  });
 
   // Countdown State Engine
   const [timeLeft, setTimeLeft] = useState({ days: "00", hours: "00", mins: "00" });
@@ -167,6 +160,24 @@ const DashboardScreen = () => {
     );
   }
 
+  // Component to render individual teammate items cleanly
+  const renderTeammember = ({ item: member }) => (
+    <View style={styles.teammateItem}>
+      <View style={styles.teammateAvatar}>
+        <Text style={styles.teammateInitial}>{member.name?.charAt(0) || "U"}</Text>
+      </View>
+      <View style={styles.teammateInfo}>
+        <Text style={styles.teammateName}>{member.name}</Text>
+        <Text style={styles.teammateEmail}>{member.email}</Text>
+      </View>
+      {member.uid === userData?.uid && (
+        <View style={styles.youBadge}>
+          <Text style={styles.youText}>YOU</Text>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       {/* Header section wrapper */}
@@ -221,9 +232,20 @@ const DashboardScreen = () => {
             <Text style={styles.statNumber}>{stats.scheduled}</Text>
             <Text style={styles.statLabel}>Pending Blasts</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: "#FF9900" }]}>
-            <Text style={styles.statNumber}>{stats.total}</Text>
-            <Text style={styles.statLabel}>Total Operations</Text>
+          <Text style={styles.userName}>{userData?.company?.name || "Your Company"}</Text>
+          <Text style={styles.userEmail}>
+            Code: <Text style={styles.highlightText}>{userData?.companyCode}</Text>
+          </Text>
+          
+          <View style={styles.userStatsContainer}>
+            <View style={styles.userStat}>
+              <Text style={styles.userStatValue}>{teammates.length}</Text>
+              <Text style={styles.userStatLabel}>Teammates</Text>
+            </View>
+            <View style={styles.userStat}>
+              <Text style={styles.userStatValue}>{userData?.company?.industry || "N/A"}</Text>
+              <Text style={styles.userStatLabel}>Industry</Text>
+            </View>
           </View>
         </View>
 
@@ -314,17 +336,19 @@ const DashboardScreen = () => {
             ))
           )}
         </View>
-        <View style={{ height: 40 }} />
+
+        <View style={styles.footerSpacing} />
       </ScrollView>
     </View>
   );
 };
 
-export default DashboardScreen;
+export default ProfileScreen;
 
 // Stylesheets
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8F9FA" },
+  centerContent: { justifyContent: 'center' },
   header: {
     backgroundColor: "#1A1F3A",
     paddingTop: 50,
@@ -341,68 +365,16 @@ const styles = StyleSheet.create({
   profileIcon: { backgroundColor: "rgba(255,255,255,0.1)", padding: 8, borderRadius: 20 },
   profileText: { fontSize: 18 },
   content: { flex: 1, padding: 15 },
-  timerCard: {
-    backgroundColor: "#1A1F3A",
+  profileCard: {
+    backgroundColor: "#FFF",
     borderRadius: 20,
     padding: 25,
     alignItems: "center",
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  timerLabel: { color: "#FF9900", fontWeight: "bold", fontSize: 12, letterSpacing: 1, marginBottom: 15 },
-  countdownContainer: { flexDirection: "row", alignItems: "center", gap: 10 },
-  timeBox: { alignItems: "center" },
-  timeValue: { color: "#FFF", fontSize: 36, fontWeight: "bold" },
-  timeUnit: { color: "#95A5A6", fontSize: 10, marginTop: -5 },
-  timeDivider: { color: "#FFF", fontSize: 24, fontWeight: "bold", marginTop: -15 },
-  launchDateText: { color: "#95A5A6", fontSize: 12, marginTop: 20 },
-  emptyTimerCard: {
-    padding: 30,
-    backgroundColor: "#FFF",
-    borderRadius: 20,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ECF0F1",
-    marginBottom: 20,
-  },
-  emptyTimerText: { fontSize: 16, fontWeight: "bold", color: "#2C3E50" },
-  emptyTimerSub: { fontSize: 12, color: "#95A5A6", marginTop: 5, textAlign: "center" },
-  statsContainer: { flexDirection: "row", gap: 12, marginBottom: 20 },
-  statCard: {
-    flex: 1,
-    borderRadius: 15,
-    padding: 15,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  statNumber: { fontSize: 20, fontWeight: "bold", color: "#FFF" },
-  statLabel: { fontSize: 10, color: "rgba(255,255,255,0.7)", marginTop: 2 },
-  section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: "bold", color: "#2C3E50", marginBottom: 15 },
-  actionButton: {
-    flexDirection: "row",
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 10,
-    alignItems: "center",
-    gap: 12,
-  },
-  actionButtonText: { fontSize: 14, fontWeight: "bold", color: "#FFF" },
-  actionButtonIcon: { fontSize: 20 },
-  historyItem: {
-    flexDirection: "row",
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 10,
-    alignItems: "center",
-    gap: 12,
-    borderWidth: 1,
-    borderColor: "#ECF0F1",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    elevation: 2,
   },
   historyStatus: { width: 35, height: 35, borderRadius: 10, justifyContent: "center", alignItems: "center" },
   historyStatusIcon: { fontSize: 16 },
