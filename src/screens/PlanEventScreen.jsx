@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,15 +11,20 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
-import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
+
+// Storage Configuration Layer
 import { storage } from "../utils/storage";
 
 const PlanEventScreen = () => {
   const navigation = useNavigation();
+
+  // Wizard Navigation Step Tracking
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState(null);
+
+  // Controlled Form Inputs Data Layout
   const [eventData, setEventData] = useState({
     title: "",
     description: "",
@@ -29,20 +35,7 @@ const PlanEventScreen = () => {
     explosiveType: "",
   });
 
-  useState(() => {
-    loadUser();
-  }, []);
-
-  const loadUser = async () => {
-    const data = await storage.getUserData();
-    setUserData(data);
-    if (data && !storage.canManageBlasts(data)) {
-      Alert.alert("Access Denied", "You do not have permission to plan blasts.");
-      navigation.goBack();
-    }
-  };
-
-  // Safety Checklist
+  // Mandatory Safety Checklist Engine
   const [checks, setChecks] = useState({
     exclusionZoneCleared: false,
     sirenTested: false,
@@ -50,11 +43,28 @@ const PlanEventScreen = () => {
     guardsPositioned: false,
   });
 
+  // Evaluate if full authorization parameters are met
   const isSafetyComplete = Object.values(checks).every((val) => val === true);
 
-  // Helper to ensure compatibility across web dev viewports and mobile devices
+  // Profile mount lifecycle side-effect hook
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    const data = await storage.getUserData();
+    setUserData(data);
+    
+    // RBAC Permission Check
+    if (data && !storage.canManageBlasts(data)) {
+      displayAlert("Access Denied", "You do not have permission to plan blasts.");
+      navigation.goBack();
+    }
+  };
+
+  // Cross-Platform Unified Alert System Wrapper (Web / Native Viewports)
   const displayAlert = (title, message, actions) => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       alert(`${title}\n\n${message}`);
       if (actions && actions[0] && actions[0].onPress) {
         actions[0].onPress();
@@ -64,19 +74,23 @@ const PlanEventScreen = () => {
     }
   };
 
+  // Step 1 Validation Rules Verification Engine
   const validateStep1 = () => {
     if (!eventData.title.trim() || !eventData.targetArea.trim()) {
       displayAlert("Input Error", "Please provide a name and target area for this blast.");
       return false;
     }
-    
+
     const dateRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
     if (!dateRegex.test(eventData.launchDate)) {
       displayAlert("Date Error", "Please enter a date in YYYY-MM-DD HH:MM format.");
       return false;
     }
 
-    const targetDate = new Date(eventData.launchDate.replace(' ', 'T')).getTime();
+    // Explicit space normalization for standardized ISO construction
+    const sanitizedDateString = eventData.launchDate.replace(/\s+/g, "T");
+    const targetDate = new Date(sanitizedDateString).getTime();
+
     if (isNaN(targetDate) || targetDate <= Date.now()) {
       displayAlert("Time Error", "Blast time must be in the future.");
       return false;
@@ -85,6 +99,7 @@ const PlanEventScreen = () => {
     return true;
   };
 
+  // Cloud Write-back Initialization Handler
   const handleSchedule = async () => {
     if (!isSafetyComplete) {
       displayAlert("Safety Warning", "All safety checks must be cleared before this blast can be scheduled.");
@@ -105,12 +120,13 @@ const PlanEventScreen = () => {
 
       if (saved) {
         displayAlert("Success", "Blast is now scheduled and the countdown has begun.", [
-          { 
-            text: "View Dashboard", 
-            onPress: () => navigation.reset({
-              index: 0,
-              routes: [{ name: "Dashboard" }],
-            }) 
+          {
+            text: "View Dashboard",
+            onPress: () =>
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "Dashboard" }],
+              }),
           },
         ]);
       } else {
@@ -124,11 +140,13 @@ const PlanEventScreen = () => {
     }
   };
 
+  // Dynamic Multi-Step Component Renderer
   const renderStep = () => {
     if (step === 1) {
       return (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Blast Details</Text>
+          
           <Text style={styles.label}>Operation Name</Text>
           <TextInput
             style={styles.input}
@@ -136,6 +154,7 @@ const PlanEventScreen = () => {
             value={eventData.title}
             onChangeText={(t) => setEventData({ ...eventData, title: t })}
           />
+
           <Text style={styles.label}>Target Area/Level</Text>
           <TextInput
             style={styles.input}
@@ -143,7 +162,8 @@ const PlanEventScreen = () => {
             value={eventData.targetArea}
             onChangeText={(t) => setEventData({ ...eventData, targetArea: t })}
           />
-          <View style={{ flexDirection: 'row', gap: 15 }}>
+
+          <View style={{ flexDirection: "row", gap: 15 }}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Hole Count</Text>
               <TextInput
@@ -165,18 +185,21 @@ const PlanEventScreen = () => {
               />
             </View>
           </View>
+
           <Text style={styles.label}>Blast Date/Time</Text>
           <TextInput
             style={styles.input}
             placeholder="YYYY-MM-DD HH:MM"
             value={eventData.launchDate}
-            onChangeText={(t) => setEventData({ ...eventData, launchDate: t.trim() })}
+            onChangeText={(t) => setEventData({ ...eventData, launchDate: t })}
           />
           <Text style={styles.formatNote}>Format: 2026-12-31 14:00 (24hr)</Text>
-          
-          <Pressable 
-            style={styles.primaryButton} 
-            onPress={() => { if (validateStep1()) setStep(2); }}
+
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => {
+              if (validateStep1()) setStep(2);
+            }}
           >
             <Text style={styles.primaryButtonText}>Continue to Safety Check</Text>
           </Pressable>
@@ -191,6 +214,7 @@ const PlanEventScreen = () => {
           Verify the following requirements to unlock the detonation timer.
         </Text>
 
+        {/* Exclusion Zone Clearance Option */}
         <View style={styles.checkItem}>
           <View style={{ flex: 1 }}>
             <Text style={styles.checkLabel}>Exclusion Zone Cleared</Text>
@@ -203,6 +227,7 @@ const PlanEventScreen = () => {
           />
         </View>
 
+        {/* Siren System Check Option */}
         <View style={styles.checkItem}>
           <View style={{ flex: 1 }}>
             <Text style={styles.checkLabel}>Siren & Warning Tested</Text>
@@ -215,6 +240,7 @@ const PlanEventScreen = () => {
           />
         </View>
 
+        {/* Engineering Pattern Inspection Option */}
         <View style={styles.checkItem}>
           <View style={{ flex: 1 }}>
             <Text style={styles.checkLabel}>Pattern Inspected</Text>
@@ -227,6 +253,7 @@ const PlanEventScreen = () => {
           />
         </View>
 
+        {/* Periphery Guard Posts Option */}
         <View style={styles.checkItem}>
           <View style={{ flex: 1 }}>
             <Text style={styles.checkLabel}>Guards Positioned</Text>
@@ -239,6 +266,7 @@ const PlanEventScreen = () => {
           />
         </View>
 
+        {/* Process Final Submit Trigger */}
         <Pressable
           style={[styles.scheduleButton, (!isSafetyComplete || loading) && styles.disabledButton]}
           onPress={handleSchedule}
@@ -252,7 +280,7 @@ const PlanEventScreen = () => {
             </Text>
           )}
         </Pressable>
-        
+
         <Pressable style={styles.backLink} onPress={() => setStep(1)} disabled={loading}>
           <Text style={styles.backLinkText}>Edit Details</Text>
         </Pressable>
@@ -262,6 +290,7 @@ const PlanEventScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Dynamic Header Toolbar Wrap */}
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()} style={styles.closeButton}>
           <Text style={styles.closeButtonText}>✕</Text>
@@ -269,13 +298,16 @@ const PlanEventScreen = () => {
         <Text style={styles.headerTitle}>Plan New Event</Text>
         <View style={{ width: 40 }} />
       </View>
-      <ScrollView contentContainerStyle={styles.content}>{renderStep()}</ScrollView>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {renderStep()}
+      </ScrollView>
     </View>
   );
 };
 
 export default PlanEventScreen;
 
+// Style sheet Rule Declarations
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8F9FA" },
   header: {
@@ -302,6 +334,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: "#E0E0E0",
+    color: "#2C3E50",
   },
   checkItem: {
     flexDirection: "row",

@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,18 +10,25 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
-import React, { useState } from "react";
 import { useNavigation, useRoute } from "@react-navigation/native";
+
+// Firestore Database Integration
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../utils/firebase";
+
+// Local Custom Storage Wrapper Utility
+import { storage } from "../utils/storage";
 
 const RecordResultScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { blastId, blastTitle } = route.params || {};
 
+  // Status and Operational States
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState(null);
+  
+  // Controlled Metric Input Form States
   const [resultData, setResultData] = useState({
     fragmentation: "",
     productivity: "",
@@ -28,6 +36,7 @@ const RecordResultScreen = () => {
     notes: "",
   });
 
+  // Profile lifecycle synchronization hook
   useEffect(() => {
     loadUser();
   }, []);
@@ -35,13 +44,27 @@ const RecordResultScreen = () => {
   const loadUser = async () => {
     const data = await storage.getUserData();
     setUserData(data);
-    
+
+    // Dynamic Role-Based Access Control Verification
     if (data && !storage.canManageBlasts(data)) {
       Alert.alert("Access Denied", "You do not have permission to record blast results.");
       navigation.goBack();
     }
   };
 
+  // Cross-Platform Uniform Dialog Warning Box System (Web / Native)
+  const displayAlert = (title, message, actions) => {
+    if (Platform.OS === "web") {
+      alert(`${title}\n\n${message}`);
+      if (actions && actions[0] && actions[0].onPress) {
+        actions[0].onPress();
+      }
+    } else {
+      Alert.alert(title, message, actions);
+    }
+  };
+
+  // Metric Update Transaction Submit Handler
   const handleSave = async () => {
     if (!blastId || !userData) return;
 
@@ -58,6 +81,7 @@ const RecordResultScreen = () => {
     setLoading(true);
     try {
       const blastRef = doc(db, "companies", userData.companyCode, "blasts", blastId);
+      
       await updateDoc(blastRef, {
         status: "Completed",
         results: {
@@ -68,20 +92,18 @@ const RecordResultScreen = () => {
           recordedAt: new Date().toISOString(),
         },
       });
-      
-      // Trigger completion confirmation dialog box
+
+      // Confirm successful commit and route user back to root shell safely
       displayAlert("Success", "Blast results recorded successfully.", [
-        { 
-          text: "OK", 
+        {
+          text: "OK",
           onPress: () => {
-            // Wipes the data entry screen route history cache 
-            // and securely drops the user onto the workspace homepage dashboard.
             navigation.reset({
               index: 0,
               routes: [{ name: "Dashboard" }],
             });
-          } 
-        }
+          },
+        },
       ]);
     } catch (error) {
       console.error("Metrics submission crash log:", error);
@@ -93,6 +115,7 @@ const RecordResultScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Structural Custom Action Header Bar View */}
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()} style={styles.closeButton}>
           <Text style={styles.closeButtonText}>✕</Text>
@@ -101,11 +124,12 @@ const RecordResultScreen = () => {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Text style={styles.blastName}>{blastTitle || "Blast Operation"}</Text>
           <Text style={styles.sectionTitle}>Performance Metrics</Text>
-          
+
+          {/* Fragmentation Inputs */}
           <Text style={styles.label}>Fragmentation Quality (1-10)</Text>
           <TextInput
             style={styles.input}
@@ -115,6 +139,7 @@ const RecordResultScreen = () => {
             onChangeText={(t) => setResultData({ ...resultData, fragmentation: t })}
           />
 
+          {/* Productivity Inputs */}
           <Text style={styles.label}>Productivity Metric (e.g., Tons/m³)</Text>
           <TextInput
             style={styles.input}
@@ -124,6 +149,7 @@ const RecordResultScreen = () => {
             onChangeText={(t) => setResultData({ ...resultData, productivity: t })}
           />
 
+          {/* Safety Incidents Log Block */}
           <Text style={styles.label}>Safety Incidents</Text>
           <TextInput
             style={styles.input}
@@ -133,17 +159,19 @@ const RecordResultScreen = () => {
             multiline
           />
 
+          {/* Field Operational Notes Block */}
           <Text style={styles.label}>General Notes</Text>
           <TextInput
-            style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
+            style={[styles.input, { height: 100, textAlignVertical: "top" }]}
             placeholder="Additional observations..."
             value={resultData.notes}
             onChangeText={(t) => setResultData({ ...resultData, notes: t })}
             multiline
           />
 
-          <Pressable 
-            style={[styles.saveButton, loading && { opacity: 0.7 }]} 
+          {/* Form Action Final Submission Trigger Button */}
+          <Pressable
+            style={[styles.saveButton, loading && { opacity: 0.7 }]}
             onPress={handleSave}
             disabled={loading}
           >
@@ -161,6 +189,7 @@ const RecordResultScreen = () => {
 
 export default RecordResultScreen;
 
+// Style sheet Rule Declarations
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8F9FA" },
   header: {
@@ -187,6 +216,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: "#E0E0E0",
+    color: "#2C3E50",
   },
   saveButton: {
     backgroundColor: "#2ECC71",
