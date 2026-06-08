@@ -10,10 +10,12 @@ import ProfileScreen from "../screens/ProfileScreen";
 import SetupScreen from "../screens/SetupScreen";
 import PlanEventScreen from "../screens/PlanEventScreen";
 import RecordResultScreen from "../screens/RecordResultScreen";
+import AdminPanelScreen from "../screens/AdminPanelScreen";
 
 const Stack = createNativeStackNavigator();
 
-export const AppNavigator = () => {
+// REMOVED 'export' from the front of const here to avoid duplication
+const AppNavigator = () => {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -27,14 +29,15 @@ export const AppNavigator = () => {
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Setup" component={SetupScreen} />
-      <Stack.Screen 
-        name="PlanEvent" 
-        component={PlanEventScreen} 
+      <Stack.Screen name="AdminPanel" component={AdminPanelScreen} />
+      <Stack.Screen
+        name="PlanEvent"
+        component={PlanEventScreen}
         options={{ presentation: "modal" }}
       />
-      <Stack.Screen 
-        name="RecordResult" 
-        component={RecordResultScreen} 
+      <Stack.Screen
+        name="RecordResult"
+        component={RecordResultScreen}
         options={{ presentation: "modal" }}
       />
     </Stack.Navigator>
