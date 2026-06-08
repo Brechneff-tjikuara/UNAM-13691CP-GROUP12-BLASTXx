@@ -7,10 +7,10 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { storage } from "../utils/storage";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../utils/firebase";
 
@@ -51,7 +51,7 @@ const RecordResultScreen = () => {
     }
 
     if (!resultData.fragmentation || !resultData.productivity) {
-      Alert.alert("Input Error", "Please provide fragmentation and productivity metrics.");
+      displayAlert("Input Error", "Please provide fragmentation and productivity metrics.");
       return;
     }
 
@@ -61,17 +61,31 @@ const RecordResultScreen = () => {
       await updateDoc(blastRef, {
         status: "Completed",
         results: {
-          ...resultData,
+          fragmentation: Number(resultData.fragmentation) || resultData.fragmentation,
+          productivity: Number(resultData.productivity) || resultData.productivity,
+          incidents: resultData.incidents,
+          notes: resultData.notes,
           recordedAt: new Date().toISOString(),
         },
       });
       
-      Alert.alert("Success", "Blast results recorded successfully.", [
-        { text: "OK", onPress: () => navigation.navigate("Dashboard") }
+      // Trigger completion confirmation dialog box
+      displayAlert("Success", "Blast results recorded successfully.", [
+        { 
+          text: "OK", 
+          onPress: () => {
+            // Wipes the data entry screen route history cache 
+            // and securely drops the user onto the workspace homepage dashboard.
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Dashboard" }],
+            });
+          } 
+        }
       ]);
     } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Failed to save blast results.");
+      console.error("Metrics submission crash log:", error);
+      displayAlert("Error", "Failed to save post-blast performance records.");
     } finally {
       setLoading(false);
     }

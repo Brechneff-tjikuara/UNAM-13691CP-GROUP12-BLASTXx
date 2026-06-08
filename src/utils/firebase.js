@@ -1,23 +1,18 @@
 import { initializeApp } from "firebase/app";
-import { initializeAuth, getReactNativePersistence, browserLocalPersistence } from "firebase/auth";
-import { 
-  initializeFirestore, 
-  persistentLocalCache, 
-  persistentMultipleTabManager 
-} from "firebase/firestore";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getAuth, browserLocalPersistence, initializeAuth } from "firebase/auth";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { Platform } from "react-native";
 
 
 // Initialize Firebase with environment variables
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  databaseURL: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
+  apiKey: "AIzaSyCR1ecOkEiBdkamGDl1aIWoOhuLdy54XRU",
+  authDomain: "my-blastx-text.firebaseapp.com",
+  projectId: "my-blastx-text",
+  storageBucket: "my-blastx-text.firebasestorage.app",
+  messagingSenderId: "256290661203",
+  appId: "1:256290661203:web:7fd8d85145f73a379537a6",
+  measurementId: "G-6ZMFTSD68N"
 };
 
 // Debug: Check if config is loaded (do not log sensitive keys in production)
@@ -30,17 +25,13 @@ if (!firebaseConfig.apiKey) {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Auth with cross-platform persistence
 const auth = initializeAuth(app, {
-  persistence: Platform.OS === 'web' 
-    ? browserLocalPersistence 
-    : getReactNativePersistence(AsyncStorage)
+  persistence: browserLocalPersistence
 });
 
-// Initialize Firestore with Persistent Cache
 const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
-    tabManager: Platform.OS === 'web' ? persistentMultipleTabManager() : undefined
+    tabManager: persistentMultipleTabManager()
   })
 });
 

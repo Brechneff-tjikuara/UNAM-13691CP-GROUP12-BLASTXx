@@ -113,6 +113,45 @@ const DashboardScreen = () => {
     });
   };
 
+  // Live countdown background ticking processor
+  useEffect(() => {
+    if (!nextEvent?.launchDate) {
+      setTimeLeft({ days: "00", hours: "00", mins: "00" });
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      // Replace spacing gaps with standard ISO 'T' layouts to guarantee stable cross-browser execution
+      const standardizedDate = nextEvent.launchDate.replace(" ", "T");
+      const targetTime = new Date(standardizedDate).getTime();
+      const difference = targetTime - Date.now();
+
+      if (difference <= 0) {
+        setTimeLeft({ days: "00", hours: "00", mins: "00" });
+        return;
+      }
+
+      // Time breakdown calculations
+      const d = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const h = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+
+      setTimeLeft({
+        days: d < 10 ? `0${d}` : `${d}`,
+        hours: h < 10 ? `0${h}` : `${h}`,
+        mins: m < 10 ? `0${m}` : `${m}`,
+      });
+    };
+
+    // Initialize timer immediately on hook evaluation loop to bypass layout lag
+    calculateTimeLeft();
+
+    // Re-verify difference values dynamically every single second
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [nextEvent]);
+
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);

@@ -39,30 +39,31 @@ const LoginScreen = () => {
 
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Clean up string fields to handle trailing spaces from phone autocompletes
+      const cleanEmail = email.trim();
+
+      // 1. Authenticate credentials against Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
       const user = userCredential.user;
 
-      // Verify user document identity profile exists within Firestore
+      // Verify user exists in Firestore
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
+        // 3. Clear auth stack memory and push into the main Dashboard view
         navigation.reset({
           index: 0,
           routes: [{ name: "Dashboard" }],
         });
       } else {
-        Alert.alert("Error", "User profile not found. Please sign up again.");
+        Alert.alert("Error", "User profile data record not found. Please register this account fresh.");
       }
     } catch (error) {
-      console.error(error);
+      console.error("Login route failed details:", error);
       let message = "An unexpected error occurred.";
-      
-      // Handle Firebase Authentication explicit error blocks
-      if (
-        error.code === "auth/user-not-found" ||
-        error.code === "auth/wrong-password" ||
-        error.code === "auth/invalid-credential"
-      ) {
+      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
         message = "Invalid email or password.";
+      } else if (error.message.includes("offline")) {
+        message = "Database synchronization error. Please clear your terminal cache.";
       }
       Alert.alert("Login Failed", message);
     } finally {
