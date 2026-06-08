@@ -50,21 +50,35 @@ const ProfileScreen = () => {
 
   // Event Handlers
   const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout? This will clear your local cache.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Logout",
-          onPress: async () => {
-            await storage.clearAll();
-            navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+    // Shared log-out code module execution sequence
+    const executeLogout = async () => {
+      await storage.clearAll();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      });
+    };
+
+    // Cross-platform condition to handle both web-view tabs and mobile components
+    if (Platform.OS === 'web') {
+      const confirmLogout = window.confirm("Are you sure you want to logout? This will clear your local cache.");
+      if (confirmLogout) {
+        executeLogout();
+      }
+    } else {
+      Alert.alert(
+        "Logout",
+        "Are you sure you want to logout? This will clear your local cache.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Logout",
+            onPress: executeLogout,
+            style: "destructive",
           },
-          style: "destructive",
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   // Loading View
