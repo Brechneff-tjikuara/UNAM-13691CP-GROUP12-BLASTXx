@@ -1,21 +1,21 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, db } from "./firebase";
-import { 
-  doc, 
-  setDoc, 
-  getDoc, 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  where, 
+import {
+  doc,
+  setDoc,
+  getDoc,
+  collection,
+  addDoc,
+  getDocs,
+  query,
   orderBy,
   limit,
   updateDoc,
   onSnapshot,
-  deleteDoc
+  deleteDoc,
 } from "firebase/firestore";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// Cache Keys Config
 const KEYS = {
   IS_SETUP_COMPLETE: "blastx_is_setup_complete",
   CACHED_USER: "blastx_cache_user",
@@ -23,7 +23,10 @@ const KEYS = {
 };
 
 export const storage = {
-  // USER PROFILE with Caching to save Quota
+  // ==========================================
+  // USER PROFILE & CACHING
+  // ==========================================
+  
   getUserData: async (forceRefresh = false) => {
     try {
       const user = auth.currentUser;
@@ -35,15 +38,15 @@ export const storage = {
         // Return cached immediately, then refresh in background if needed
         return JSON.parse(cached);
       }
-      
+
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
         const companyDoc = await getDoc(doc(db, "companies", userData.companyCode));
-        
+
         const fullData = {
           ...userData,
-          company: companyDoc.exists() ? companyDoc.data() : null
+          company: companyDoc.exists() ? companyDoc.data() : null,
         };
 
         // Update Cache
@@ -62,6 +65,7 @@ export const storage = {
     try {
       await setDoc(doc(db, "companies", companyCode), details, { merge: true });
       await AsyncStorage.setItem(KEYS.IS_SETUP_COMPLETE, "true");
+      
       // Clear cache to force refresh on next load
       await AsyncStorage.removeItem(KEYS.CACHED_USER);
     } catch (e) {
@@ -69,7 +73,10 @@ export const storage = {
     }
   },
 
-  // BLASTS / EVENTS with optimized fetching
+  // ==========================================
+  // BLASTS / EVENTS MANAGEMENT
+  // ==========================================
+
   saveBlast: async (blast) => {
     try {
       const user = auth.currentUser;
@@ -99,34 +106,43 @@ export const storage = {
     const user = auth.currentUser;
     if (!user) return () => {};
 
-    let unsubscribe = () => {};
+    let unsubscribe = null;
 
-    // First get the user's company code
-    storage.getUserData().then(uData => {
+    // First get the user's company code safely
+    storage.getUserData().then((uData) => {
       if (!uData || !uData.companyCode) return;
 
       const q = query(
-        collection(db, "companies", uData.companyCode, "blasts"), 
+        collection(db, "companies", uData.companyCode, "blasts"),
         orderBy("createdAt", "desc"),
         limit(maxResults)
       );
 
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        const blasts = [];
-        snapshot.forEach((doc) => {
-          blasts.push({ id: doc.id, ...doc.data() });
-        });
-        // Pass metadata to callback
-        callback(blasts, {
-          hasPendingWrites: snapshot.metadata.hasPendingWrites,
-          fromCache: snapshot.metadata.fromCache
-        });
-      }, (error) => {
-        console.error("Error in onBlastsUpdate snapshot", error);
-      });
+      unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const blasts = [];
+          snapshot.forEach((doc) => {
+            blasts.push({ id: doc.id, ...doc.data() });
+          });
+          // Pass metadata to callback
+          callback(blasts, {
+            hasPendingWrites: snapshot.metadata.hasPendingWrites,
+            fromCache: snapshot.metadata.fromCache,
+          });
+        },
+        (error) => {
+          console.error("Error in onBlastsUpdate snapshot", error);
+        }
+      );
     });
 
-    return () => unsubscribe();
+    // Clean execution handling for unmounting components
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   },
 
   getBlasts: async (maxResults = 20) => {
@@ -138,7 +154,7 @@ export const storage = {
       if (!uData) return [];
 
       const q = query(
-        collection(db, "companies", uData.companyCode, "blasts"), 
+        collection(db, "companies", uData.companyCode, "blasts"),
         orderBy("createdAt", "desc"),
         limit(maxResults)
       );
@@ -155,15 +171,16 @@ export const storage = {
     }
   },
 
-  // TEAMMATES - Fetch from company subcollection
+  // ==========================================
+  // TEAMMATES & MEMBERS MANAGEMENT
+  // ==========================================
+
   getTeammates: async () => {
     try {
       const uData = await storage.getUserData();
       if (!uData) return [];
 
-      const q = query(
-        collection(db, "companies", uData.companyCode, "team")
-      );
+      const q = query(collection(db, "companies", uData.companyCode, "team"));
 
       const querySnapshot = await getDocs(q);
       const teammates = [];
@@ -189,7 +206,7 @@ export const storage = {
       await updateDoc(doc(db, "users", memberUid), updates);
       // Update in company team subcollection
       await updateDoc(doc(db, "companies", companyCode, "team", memberUid), updates);
-      
+
       return true;
     } catch (e) {
       console.error("Error promoting member", e);
@@ -207,7 +224,7 @@ export const storage = {
 
       await updateDoc(doc(db, "users", memberUid), updates);
       await updateDoc(doc(db, "companies", companyCode, "team", memberUid), updates);
-      
+
       return true;
     } catch (e) {
       console.error("Error demoting member", e);
@@ -223,14 +240,14 @@ export const storage = {
       const companyCode = uData.companyCode;
 
       // Update user record to clear company association
-      await updateDoc(doc(db, "users", memberUid), { 
-        companyCode: null, 
-        role: "member" 
+      await updateDoc(doc(db, "users", memberUid), {
+        companyCode: null,
+        role: "member",
       });
 
       // Remove from company team subcollection
       await deleteDoc(doc(db, "companies", companyCode, "team", memberUid));
-      
+
       return true;
     } catch (e) {
       console.error("Error removing member", e);
@@ -238,7 +255,10 @@ export const storage = {
     }
   },
 
-  // SETUP STATE
+  // ==========================================
+  // CONFIGURATION / SESSION
+  // ==========================================
+
   isSetupComplete: async () => {
     try {
       const value = await AsyncStorage.getItem(KEYS.IS_SETUP_COMPLETE);
@@ -261,16 +281,16 @@ export const storage = {
     if (!userData) return false;
     // Admins always have access
     if (userData.role === "admin") return true;
-    
+
     // If RBAC is disabled, everyone can manage blasts
     if (userData.company && userData.company.rbacEnabled === false) {
       return true;
     }
-    
+
     const position = userData.minePosition?.toLowerCase() || "";
     const allowedKeywords = ["engineer", "analyst", "specialist"];
-    
-    return allowedKeywords.some(keyword => position.includes(keyword));
+
+    return allowedKeywords.some((keyword) => position.includes(keyword));
   },
 
   toggleRBAC: async (companyCode, isEnabled) => {
