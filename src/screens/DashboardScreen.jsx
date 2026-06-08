@@ -1,15 +1,28 @@
-import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import React, { useEffect, useState, useCallback } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  Pressable,
+  ActivityIndicator,
+  Image,
+} from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+
+// Configuration, Storage and Assets
 import { storage } from "../utils/storage";
 import logo from "../../assets/icon.png";
-import { Image } from "react-native";
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
+
+  // Core Data States
   const [userData, setUserData] = useState(null);
   const [events, setEvents] = useState([]);
   const [nextEvent, setNextEvent] = useState(null);
+  
+  // Status States
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [stats, setStats] = useState({
@@ -19,8 +32,10 @@ const DashboardScreen = () => {
     failed: 0,
   });
 
+  // Countdown State Engine
   const [timeLeft, setTimeLeft] = useState({ days: "00", hours: "00", mins: "00" });
 
+  // Real-time Event Subscription & Mounting Context
   useFocusEffect(
     useCallback(() => {
       let unsubscribeBlasts = () => {};
@@ -30,8 +45,7 @@ const DashboardScreen = () => {
         const data = await storage.getUserData();
         setUserData(data);
 
-        // storage.onBlastsUpdate now needs to provide metadata or we handle it here
-        // Let's modify storage.onBlastsUpdate to pass metadata
+        // Subscribing to real-time changes inside company collection
         unsubscribeBlasts = storage.onBlastsUpdate((eData, metadata) => {
           setEvents(eData);
           updateStats(eData);
@@ -48,8 +62,43 @@ const DashboardScreen = () => {
     }, [])
   );
 
+  // Background Live Ticker Calculation Engine for Launch Time
+  useEffect(() => {
+    if (!nextEvent || !nextEvent.launchDate) {
+      setTimeLeft({ days: "00", hours: "00", mins: "00" });
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const targetTime = new Date(nextEvent.launchDate).getTime();
+      const currentTime = new Date().getTime();
+      const difference = targetTime - currentTime;
+
+      if (difference <= 0) {
+        setTimeLeft({ days: "00", hours: "00", mins: "00" });
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+
+      setTimeLeft({
+        days: days < 10 ? `0${days}` : `${days}`,
+        hours: hours < 10 ? `0${hours}` : `${hours}`,
+        mins: minutes < 10 ? `0${minutes}` : `${minutes}`,
+      });
+    };
+
+    calculateTimeLeft(); // Run calculation instantly on reference match
+    const intervalId = setInterval(calculateTimeLeft, 60000); // Poll computation every minute
+
+    return () => clearInterval(intervalId);
+  }, [nextEvent]);
+
+  // UI Calculation Utilities
   const updateStats = (eData) => {
-    const scheduled = eData.filter(e => e.status === "Scheduled");
+    const scheduled = eData.filter((e) => e.status === "Scheduled");
     if (scheduled.length > 0) {
       setNextEvent(scheduled[0]);
     } else {
@@ -59,20 +108,21 @@ const DashboardScreen = () => {
     setStats({
       total: eData.length,
       scheduled: scheduled.length,
-      completed: eData.filter(e => e.status === "Completed").length,
-      failed: eData.filter(e => e.status === "Failed").length,
+      completed: eData.filter((e) => e.status === "Completed").length,
+      failed: eData.filter((e) => e.status === "Failed").length,
     });
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   };
 
+  // Loading Screen View
   if (loading && !userData) {
     return (
-      <View style={[styles.container, { justifyContent: 'center' }]}>
+      <View style={[styles.container, { justifyContent: "center" }]}>
         <ActivityIndicator size="large" color="#FF9900" />
       </View>
     );
@@ -80,9 +130,10 @@ const DashboardScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Header section wrapper */}
       <View style={styles.header}>
         <Image source={logo} style={styles.headerLogo} />
-        <View style={{ flex: 1 }}>
+        <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {userData?.company?.name || "BlastX"}
           </Text>
@@ -96,7 +147,7 @@ const DashboardScreen = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Countdown Timer Section */}
+        {/* Countdown Timer Card */}
         {nextEvent ? (
           <View style={styles.timerCard}>
             <Text style={styles.timerLabel}>NEXT LAUNCH: {nextEvent.title}</Text>
@@ -125,7 +176,7 @@ const DashboardScreen = () => {
           </View>
         )}
 
-        {/* Quick Stats */}
+        {/* Quick Operational Status Block */}
         <View style={styles.statsContainer}>
           <View style={[styles.statCard, { backgroundColor: "#1A1F3A" }]}>
             <Text style={styles.statNumber}>{stats.scheduled}</Text>
@@ -137,7 +188,7 @@ const DashboardScreen = () => {
           </View>
         </View>
 
-        {/* Action Buttons */}
+        {/* Blast Operations Action Control */}
         {storage.canManageBlasts(userData) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Blast Control</Text>
@@ -151,7 +202,7 @@ const DashboardScreen = () => {
           </View>
         )}
 
-        {/* Admin Management Section */}
+        {/* Administrator Configuration Actions */}
         {userData?.role === "admin" && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Admin Management</Text>
@@ -174,7 +225,7 @@ const DashboardScreen = () => {
           </View>
         )}
 
-        {/* Recent Event History Section */}
+        {/* Recent Operation Event Logs */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Operations</Text>
           {events.length === 0 ? (
@@ -183,14 +234,14 @@ const DashboardScreen = () => {
             </View>
           ) : (
             events.map((event) => (
-              <Pressable 
-                key={event.id} 
+              <Pressable
+                key={event.id}
                 style={styles.historyItem}
                 onPress={() => {
                   if (event.status === "Scheduled") {
-                    navigation.navigate("RecordResult", { 
-                      blastId: event.id, 
-                      blastTitle: event.title 
+                    navigation.navigate("RecordResult", {
+                      blastId: event.id,
+                      blastTitle: event.title,
                     });
                   }
                 }}
@@ -232,6 +283,7 @@ const DashboardScreen = () => {
 
 export default DashboardScreen;
 
+// Stylesheets
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8F9FA" },
   header: {
@@ -243,7 +295,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#FFF", flex: 1 },
+  headerTitleContainer: { flex: 1 },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#FFF" },
   headerLogo: { width: 30, height: 30, borderRadius: 6, marginRight: 12 },
   syncingText: { fontSize: 10, color: "#FF9900", marginTop: 2, fontWeight: "600" },
   profileIcon: { backgroundColor: "rgba(255,255,255,0.1)", padding: 8, borderRadius: 20 },
