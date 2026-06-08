@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -11,19 +12,25 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import logo from "../../assets/icon.png";
+
+// Authentication & Database Configurations
 import { auth, db } from "../utils/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
+// Assets
+import logo from "../../assets/icon.png";
+
 const LoginScreen = () => {
   const navigation = useNavigation();
+
+  // Controlled Input States
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Authentication Submission Handler
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Please enter both email and password");
@@ -35,7 +42,7 @@ const LoginScreen = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Verify user exists in Firestore
+      // Verify user document identity profile exists within Firestore
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
         navigation.reset({
@@ -48,7 +55,13 @@ const LoginScreen = () => {
     } catch (error) {
       console.error(error);
       let message = "An unexpected error occurred.";
-      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
+      
+      // Handle Firebase Authentication explicit error blocks
+      if (
+        error.code === "auth/user-not-found" ||
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/invalid-credential"
+      ) {
         message = "Invalid email or password.";
       }
       Alert.alert("Login Failed", message);
@@ -62,14 +75,17 @@ const LoginScreen = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Branding & Welcome Header */}
         <View style={styles.header}>
           <Image source={logo} style={styles.logo} />
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Log in to manage your blasts</Text>
         </View>
 
+        {/* Credentials Submission Form */}
         <View style={styles.form}>
+          {/* Email input block wrapper */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email Address</Text>
             <TextInput
@@ -79,9 +95,11 @@ const LoginScreen = () => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
+          {/* Password input block wrapper */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
             <TextInput
@@ -90,15 +108,19 @@ const LoginScreen = () => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
+          {/* Password Recovery Link */}
           <Pressable style={styles.forgotPassword}>
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </Pressable>
 
-          <Pressable 
-            style={[styles.loginButton, loading && { opacity: 0.7 }]} 
+          {/* Authentication Submission Control Trigger */}
+          <Pressable
+            style={[styles.loginButton, loading && { opacity: 0.7 }]}
             onPress={handleLogin}
             disabled={loading}
           >
@@ -109,6 +131,7 @@ const LoginScreen = () => {
             )}
           </Pressable>
 
+          {/* Account Creation Navigation Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don't have an account? </Text>
             <Pressable onPress={() => navigation.navigate("Signup")}>
@@ -123,6 +146,7 @@ const LoginScreen = () => {
 
 export default LoginScreen;
 
+// Style Sheet Rules
 const styles = StyleSheet.create({
   container: {
     flex: 1,
