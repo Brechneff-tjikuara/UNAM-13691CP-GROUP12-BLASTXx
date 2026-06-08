@@ -6,6 +6,9 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./src/utils/firebase";
 import AppNavigator from "./src/navigation/AppNavigator";
 
+
+
+
 // Basic Error Boundary for Web/Native Stability
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
@@ -33,6 +36,7 @@ export default function App() {
       }
     });
 
+    
     return () => {
       unsubscribe();
     };
