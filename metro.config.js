@@ -9,3 +9,4 @@ config.resolver.sourceExts.push('mjs');
 config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
 
 module.exports = config;
+

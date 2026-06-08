@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import logo from "../../assets/logo.png";
+import logo from "../../assets/icon.png";
 import { auth, db } from "../utils/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
@@ -31,16 +31,17 @@ const SignupScreen = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   };
 
-  const handleSignup = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
-    }
+const handleSignup = async () => {
+  if (!email || !password || !name) {
+    Alert.alert("Error", "Please fill in all required fields");
+    return;
+  }
 
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
-      return;
-    }
+  setLoading(true);
+  try {
+    // 1. Create the user in Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
     setLoading(true);
     try {
@@ -50,9 +51,10 @@ const SignupScreen = () => {
       const user = userCredential.user;
       console.log("Auth user created:", user.uid);
 
-      // 2. Determine Company Code (Use existing or generate new)
-      let finalCode = companyCode.trim().toUpperCase();
-      let isNewCompany = false;
+    // 3. Handle Firestore safely
+    if (finalCompanyCode) {
+      const companyRef = doc(db, "companies", finalCompanyCode);
+      const companySnap = await getDoc(companyRef);
 
       if (!finalCode) {
         finalCode = generateCode();
@@ -78,12 +80,14 @@ const SignupScreen = () => {
 
       // 3. Save User Profile
       console.log("Saving user profile to Firestore...");
+      const role = isNewCompany ? "admin" : "member";
       const userProfile = {
         uid: user.uid,
         name,
         email,
         companyCode: finalCode,
-        minePosition: "Mining Engineer", // Default role, can be updated in setup
+        role: role,
+        minePosition: isNewCompany ? "Admin / Site Manager" : "Mining Engineer",
         canCreateBlasts: true, // Default permission
         createdAt: new Date().toISOString(),
       };
@@ -102,15 +106,16 @@ const SignupScreen = () => {
           code: finalCode,
           name: name + "'s Company", // Default name, can be changed in setup
           createdAt: new Date().toISOString(),
-          createdBy: user.uid,
-          rbacEnabled: false,
+          registeredBy: user.uid,
+          rbacEnabled: true, // Default to true as per user description
+          location: "Not Set",
+          mineType: "Not Set",
         });
         console.log("Company record created.");
       }
 
-      Alert.alert("Success", `Account created! Your Company Code is: ${finalCode}`, [
-        { text: "Continue", onPress: () => navigation.navigate("Setup") }
-      ]);
+    Alert.alert("Success", "Account created successfully!");
+    // navigation.navigate("Home");
 
     } catch (error) {
       console.error("SIGNUP ERROR:", error);

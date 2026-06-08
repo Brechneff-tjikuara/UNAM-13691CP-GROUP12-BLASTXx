@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,28 +7,33 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
-  FlatList,
+  Image,
 } from "react-native";
-import React, { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
+
+// Configuration, Storage and Assets
 import { storage } from "../utils/storage";
+import logo from "../../assets/icon.png";
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
+
+  // State Management
   const [userData, setUserData] = useState(null);
   const [teammates, setTeammates] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Lifecycle Methods
   useEffect(() => {
     let isMounted = true;
 
     const loadProfileData = async () => {
       setLoading(true);
       const data = await storage.getUserData();
-      
+
       if (!isMounted) return;
       setUserData(data);
-      
+
       if (data) {
         const team = await storage.getTeammates();
         if (isMounted) setTeammates(team);
@@ -42,24 +48,40 @@ const ProfileScreen = () => {
     };
   }, []);
 
+  // Event Handlers
   const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout? This will clear your local cache.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Logout",
-          onPress: async () => {
-            await storage.clearAll();
-            navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+    // Shared log-out code module execution sequence
+    const executeLogout = async () => {
+      await storage.clearAll();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      });
+    };
+
+    // Cross-platform condition to handle both web-view tabs and mobile components
+    if (Platform.OS === 'web') {
+      const confirmLogout = window.confirm("Are you sure you want to logout? This will clear your local cache.");
+      if (confirmLogout) {
+        executeLogout();
+      }
+    } else {
+      Alert.alert(
+        "Logout",
+        "Are you sure you want to logout? This will clear your local cache.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Logout",
+            onPress: executeLogout,
+            style: "destructive",
           },
-          style: "destructive",
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
+  // Loading View
   if (loading && !userData) {
     return (
       <View style={[styles.container, styles.centerContent]}>
@@ -68,9 +90,9 @@ const ProfileScreen = () => {
     );
   }
 
-  // Component to render individual teammate items cleanly
-  const renderTeammember = ({ item: member }) => (
-    <View style={styles.teammateItem}>
+  // Component UI Render Blocks
+  const renderTeammember = (member, index) => (
+    <View style={styles.teammateItem} key={member.uid || index.toString()}>
       <View style={styles.teammateAvatar}>
         <Text style={styles.teammateInitial}>{member.name?.charAt(0) || "U"}</Text>
       </View>
@@ -100,13 +122,13 @@ const ProfileScreen = () => {
         {/* Company Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
-            <Text style={styles.avatar}>🏢</Text>
+            <Image source={logo} style={styles.avatarImage} />
           </View>
           <Text style={styles.userName}>{userData?.company?.name || "Your Company"}</Text>
           <Text style={styles.userEmail}>
             Code: <Text style={styles.highlightText}>{userData?.companyCode}</Text>
           </Text>
-          
+
           <View style={styles.userStatsContainer}>
             <View style={styles.userStat}>
               <Text style={styles.userStatValue}>{teammates.length}</Text>
@@ -122,13 +144,23 @@ const ProfileScreen = () => {
         {/* Teammates Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Teammates ({teammates.length})</Text>
-          <FlatList
-            data={teammates}
-            renderItem={renderTeammember}
-            keyExtractor={(_, index) => index.toString()}
-            scrollEnabled={false} // Keeps scrolling unified inside parent ScrollView
-          />
+          {teammates.map((member, index) => renderTeammember(member, index))}
         </View>
+
+        {/* Administration Section */}
+        {userData?.role === "admin" && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Administration</Text>
+            <Pressable
+              style={styles.settingsItem}
+              onPress={() => navigation.navigate("AdminPanel")}
+            >
+              <Text style={styles.settingsItemIcon}>🛡️</Text>
+              <Text style={styles.adminLinkText}>Manage Team & Roles</Text>
+            </Pressable>
+          </View>
+        )}
+
 
         {/* Account Actions */}
         <View style={styles.section}>
@@ -147,9 +179,10 @@ const ProfileScreen = () => {
 
 export default ProfileScreen;
 
+// Stylesheets
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8F9FA" },
-  centerContent: { justifyContent: 'center' },
+  centerContent: { justifyContent: "center" },
   header: {
     backgroundColor: "#1A1F3A",
     paddingTop: 50,
@@ -160,7 +193,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: { fontSize: 18, fontWeight: "bold", color: "#FFF" },
-  backButton: { backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 15 },
+  backButton: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
   backButtonText: { color: "#FFF", fontSize: 12 },
   content: { flex: 1, padding: 15 },
   profileCard: {
@@ -174,12 +212,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     elevation: 2,
   },
-  avatarContainer: { width: 70, height: 70, borderRadius: 35, backgroundColor: "#F0F3F4", justifyContent: "center", alignItems: "center", marginBottom: 15 },
+  avatarContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#F0F3F4",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  avatarImage: { width: 50, height: 50, borderRadius: 10 },
   avatar: { fontSize: 30 },
   userName: { fontSize: 20, fontWeight: "bold", color: "#2C3E50" },
   userEmail: { fontSize: 14, color: "#95A5A6", marginTop: 5 },
-  highlightText: { fontWeight: 'bold', color: '#FF9900' },
-  userStatsContainer: { flexDirection: "row", justifyContent: "space-around", width: "100%", borderTopWidth: 1, borderTopColor: "#ECF0F1", paddingTop: 20, marginTop: 20 },
+  highlightText: { fontWeight: "bold", color: "#FF9900" },
+  userStatsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    borderTopWidth: 1,
+    borderTopColor: "#ECF0F1",
+    paddingTop: 20,
+    marginTop: 20,
+  },
   userStat: { alignItems: "center" },
   userStatValue: { fontSize: 16, fontWeight: "bold", color: "#2C3E50" },
   userStatLabel: { fontSize: 11, color: "#95A5A6", marginTop: 3 },
@@ -195,6 +250,7 @@ const styles = StyleSheet.create({
   youText: { fontSize: 10, fontWeight: "bold", color: "#3498DB" },
   settingsItem: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", padding: 15, borderRadius: 12, gap: 12 },
   settingsItemIcon: { fontSize: 18 },
-  logoutText: { fontSize: 14, fontWeight: "bold", color: '#E74C3C' },
-  footerSpacing: { height: 40 }
+  adminLinkText: { fontSize: 14, fontWeight: "bold", color: "#FF9900" },
+  logoutText: { fontSize: 14, fontWeight: "bold", color: "#E74C3C" },
+  footerSpacing: { height: 40 },
 });

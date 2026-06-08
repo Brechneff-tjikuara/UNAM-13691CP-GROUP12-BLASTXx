@@ -8,6 +8,7 @@ import {
   Alert,
   Switch,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -17,6 +18,7 @@ const PlanEventScreen = () => {
   const navigation = useNavigation();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState(null);
   const [eventData, setEventData] = useState({
     title: "",
     description: "",
@@ -26,6 +28,19 @@ const PlanEventScreen = () => {
     holeCount: "",
     explosiveType: "",
   });
+
+  useState(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    const data = await storage.getUserData();
+    setUserData(data);
+    if (data && !storage.canManageBlasts(data)) {
+      Alert.alert("Access Denied", "You do not have permission to plan blasts.");
+      navigation.goBack();
+    }
+  };
 
   // Safety Checklist
   const [checks, setChecks] = useState({
@@ -37,22 +52,33 @@ const PlanEventScreen = () => {
 
   const isSafetyComplete = Object.values(checks).every((val) => val === true);
 
+  // Helper to ensure compatibility across web dev viewports and mobile devices
+  const displayAlert = (title, message, actions) => {
+    if (Platform.OS === 'web') {
+      alert(`${title}\n\n${message}`);
+      if (actions && actions[0] && actions[0].onPress) {
+        actions[0].onPress();
+      }
+    } else {
+      Alert.alert(title, message, actions);
+    }
+  };
+
   const validateStep1 = () => {
     if (!eventData.title.trim() || !eventData.targetArea.trim()) {
-      Alert.alert("Input Error", "Please provide a name and target area for this blast.");
+      displayAlert("Input Error", "Please provide a name and target area for this blast.");
       return false;
     }
     
-    // Basic date validation (YYYY-MM-DD HH:MM)
     const dateRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
     if (!dateRegex.test(eventData.launchDate)) {
-      Alert.alert("Date Error", "Please enter a date in YYYY-MM-DD HH:MM format.");
+      displayAlert("Date Error", "Please enter a date in YYYY-MM-DD HH:MM format.");
       return false;
     }
 
     const targetDate = new Date(eventData.launchDate.replace(' ', 'T')).getTime();
     if (isNaN(targetDate) || targetDate <= Date.now()) {
-      Alert.alert("Time Error", "Blast time must be in the future.");
+      displayAlert("Time Error", "Blast time must be in the future.");
       return false;
     }
 
@@ -61,26 +87,40 @@ const PlanEventScreen = () => {
 
   const handleSchedule = async () => {
     if (!isSafetyComplete) {
-      Alert.alert("Safety Warning", "All safety checks must be cleared before this blast can be scheduled.");
+      displayAlert("Safety Warning", "All safety checks must be cleared before this blast can be scheduled.");
       return;
     }
 
     setLoading(true);
-    const newEvent = {
-      ...eventData,
-      status: "Scheduled",
-      checks,
-    };
+    try {
+      const newEvent = {
+        ...eventData,
+        holeCount: Number(eventData.holeCount) || 0,
+        blastSize: Number(eventData.blastSize) || 0,
+        status: "Scheduled",
+        checks,
+      };
 
-    const saved = await storage.saveBlast(newEvent);
+      const saved = await storage.saveBlast(newEvent);
 
-    setLoading(false);
-    if (saved) {
-      Alert.alert("Success", "Blast is now scheduled and the countdown has begun.", [
-        { text: "View Dashboard", onPress: () => navigation.navigate("Dashboard") },
-      ]);
-    } else {
-      Alert.alert("Error", "Failed to initialize blast timer. Please try again.");
+      if (saved) {
+        displayAlert("Success", "Blast is now scheduled and the countdown has begun.", [
+          { 
+            text: "View Dashboard", 
+            onPress: () => navigation.reset({
+              index: 0,
+              routes: [{ name: "Dashboard" }],
+            }) 
+          },
+        ]);
+      } else {
+        throw new Error("Cloud synchronization failed.");
+      }
+    } catch (e) {
+      console.error("Scheduling error:", e);
+      displayAlert("Error", "Failed to initialize blast timer. Please check your data layout.");
+    } finally {
+      setLoading(false);
     }
   };
 

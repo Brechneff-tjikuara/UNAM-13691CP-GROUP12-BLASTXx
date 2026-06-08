@@ -10,6 +10,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 import SetupScreen from "../screens/SetupScreen";
 import PlanEventScreen from "../screens/PlanEventScreen";
 import RecordResultScreen from "../screens/RecordResultScreen";
+import AdminPanelScreen from "../screens/AdminPanelScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -28,6 +29,7 @@ const AppNavigator = () => {
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Setup" component={SetupScreen} />
+      <Stack.Screen name="AdminPanel" component={AdminPanelScreen} />
       <Stack.Screen
         name="PlanEvent"
         component={PlanEventScreen}
