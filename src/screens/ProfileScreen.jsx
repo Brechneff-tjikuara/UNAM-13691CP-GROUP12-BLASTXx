@@ -147,6 +147,7 @@ const ProfileScreen = () => {
           </View>
         )}
 
+
         {/* Account Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
